@@ -1,0 +1,60 @@
+// This file describes the format used to record Stixels detected in an image
+// This data format is ment to be used together with the DataSequence<> class
+// for more details see http://code.google.com/p/protobuf and DataSequence.hpp
+
+package doppia_protobuf;
+
+import "ground_top_and_bottom.proto";
+import "plane3d.proto";
+
+message Stixel
+{
+	// width of the stixel, in pixels
+	required uint32 width = 1;
+
+	// center position of the stixel, in pixels
+	required uint32 x = 2;
+
+	// top and bottom position, in pixels
+	required uint32 bottom_y = 3;
+	required uint32 top_y = 4;
+
+	// depth corresponding to the nearest point covered by the stixel, in pixels
+	required uint32 disparity = 5;
+
+	// class of the object covered by the stixel
+	enum Type { Unknown = 0; Occluded = 1; Car = 2; Pedestrian = 3; StaticObject = 4; }
+
+	required Type type = 6;
+	
+	// horizontal displacement starting from the center of stixel and ending at the center of the matched stixel
+	// "backward" indicates that _every_ stixel in the current frame has a matched stixel in the previous frame.
+        // previous_stixel_x = current_stixel_x + backward_delta_x
+	// valid_delta_x indicates whether the delta_x assignment is valid or invalid.
+	// valid_delta_x == false means :
+	// -- either the stixel in the current frame has type Occluded
+	// -- or there can not be found a match in the previous frame for the stixel in the current frame
+	// -- or the stixel in previous frame to which the stixel in the current frame is matched to, has type Occluded
+	optional int32 backward_delta_x = 7 [default = 0];
+	optional bool valid_delta_x = 8 [default = false];
+
+        // number of stixels in the previous frame covered by the stixel in the current frame
+        // the count of the width is done from left to right with respect to the stixel
+        // pointed by backward_delta_x
+        optional int32 backward_width = 9 [default = 1];
+}
+
+message Stixels
+{
+	optional string image_name = 1;
+
+	repeated Stixel stixels = 2;
+
+	optional GroundTopAndBottom ground_top_and_bottom = 3;
+
+        // the ground plane in the left camera coordinates
+        // the normal should be similar to x = 0, y = -1, z =0;
+        // the z component will provide the pitch information
+        optional Plane3d ground_plane = 4;
+}
+

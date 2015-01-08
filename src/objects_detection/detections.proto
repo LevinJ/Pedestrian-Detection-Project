@@ -1,0 +1,41 @@
+// This file describes the format used to record objects detected in an image
+// This data format is ment to be used together with the DataSequence<> class
+// for more details see http://code.google.com/p/protobuf and DataSequence.hpp
+
+package doppia_protobuf;
+
+message Point2d
+{
+    required int32 x = 1;
+    required int32 y = 2;
+}
+
+// The Box naming convention maps
+// boost::geometry::model::box
+message Box
+{
+    required Point2d min_corner = 1;
+    required Point2d max_corner = 2;
+}
+
+
+message Detection
+{
+    required Box bounding_box = 1;
+    
+    // class of the detected objects
+    // (numbering consistent with stixels.proto )
+    enum ObjectClasses { Car=2; Pedestrian=3; Bike=5; Motorbike=6; Bus=7; Tram=8; StaticObject=4; Unknown=0; }
+
+    required ObjectClasses object_class = 2;
+
+    optional float score = 3;   
+}
+
+message Detections
+{
+   optional string image_name = 1;
+
+   repeated Detection detections = 2;
+}
+

@@ -1,0 +1,107 @@
+// This file describes the calibration parameters of stereo and monocular cameras
+// see http://code.google.com/p/protobuf/ for more details
+
+package doppia_protobuf;
+
+// all units in SI. Distances are in meters.
+
+
+message CameraInternalParameters
+{
+// K 3x3 matrix with camera internals
+// k12 is the value at row 1 and column 2
+
+  required float k11 = 1;
+  required float k12 = 2;
+  required float k13 = 3;
+
+  required float k21 = 4;
+  required float k22 = 5;
+  required float k23 = 6;
+
+  required float k31 = 7;
+  required float k32 = 8;
+  required float k33 = 9;
+
+}
+
+message RadialDistortion
+{
+// x' = x + (x - x_center)*(k1*r**2 + k2*r**4 + k3*r**8)
+// y' = y + (y - y_center)*(k1*r**2 + k2*r**4 + k3*r**8)
+// r is the distance from the center to (x,y)
+// see http://en.wikipedia.org/wiki/Distortion_%28optics%29
+  required float k1 = 1; // power 2 factor coefficient
+  optional float k2 = 2; // power 4 factor coefficient
+  optional float k3 = 3; // power 8 factor coefficient
+}
+
+
+message TangentialDistortion
+{
+// x' = x + (k1*(r**2 + 2*(x − x_center)**2) + 2*k2(x − x_center)(y − y_center))(1 + k3*r**2 + ...)
+// y' = y + (k2*(r**2 + 2*(y − y_center)**2) + 2*k1(x − x_center)(y − y_center))(1 + k3*r**2 + ...)
+// r is the distance from the center to (x,y)
+// see http://en.wikipedia.org/wiki/Distortion_%28optics%29
+  required float k1 = 1; // x factor
+  required float k2 = 2; // y factor
+  optional float k3 = 3; // r**2 factor
+}
+
+
+message RotationMatrix
+{
+// R 3x3 matrix using the ?? convention
+// see http://en.wikipedia.org/wiki/Rotation_matrix
+// R and t are such that X_camera = R * X_world + t
+
+  required float r11 = 1;
+  required float r12 = 2;
+  required float r13 = 3;
+
+  required float r21 = 4;
+  required float r22 = 5;
+  required float r23 = 6;
+
+  required float r31 = 7;
+  required float r32 = 8;
+  required float r33 = 9;
+}
+
+message TranslationVector
+{
+// t 1x3 translation vector in meters
+
+  required float t1 = 1;
+  required float t2 = 2;
+  required float t3 = 3;
+}
+
+message Pose
+{
+// the pose defines a position in space, and a defined orientation
+// R and t are such that X_camera = R * X_world + t
+
+  required RotationMatrix rotation = 1;
+  required TranslationVector translation = 2;
+}
+
+message CameraCalibration
+{
+  optional string name = 1; // name of the camera
+
+  required CameraInternalParameters internal_parameters = 2;
+
+  optional RadialDistortion radial_distortion = 3;
+  optional TangentialDistortion tangential_distortion = 4;
+
+  optional Pose pose = 5;
+}
+
+
+message StereoCameraCalibration {
+
+  optional string name = 1; // name of the stereo camera
+  required CameraCalibration left_camera = 2;
+  required CameraCalibration right_camera = 3;
+}

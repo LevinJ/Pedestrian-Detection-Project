@@ -1,0 +1,12 @@
+// This file describes the header used in all DataSequence files
+// see http://code.google.com/p/protobuf/ for more details
+
+package doppia_protobuf;
+
+message TestData
+{
+ optional int32 int_value = 1;
+ optional float float_value = 2;
+ optional string string_value = 3;
+}
+

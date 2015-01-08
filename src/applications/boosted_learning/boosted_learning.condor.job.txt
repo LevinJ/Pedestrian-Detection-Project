@@ -1,0 +1,32 @@
+Universe    = vanilla
+Executable  = boosted_learning
+Arguments   = --conf=def.cfg  --task=bootstrapTrain 
+Requirements = Arch == "X86_64"
+Requirements = distribution == "Fedora"
+Requirements = distributionversion == "15"
+Requirements = (machine == "monkey.esat.kuleuven.be") ||\
+			   (machine == "rat.esat.kuleuven.be") ||\
+			   (machine == "ox.esat.kuleuven.be") ||\
+			   (machine == "tiger.esat.kuleuven.be") ||\
+			   (machine == "rabbit.esat.kuleuven.be") ||\
+			   (machine == "dragon.esat.kuleuven.be") ||\
+			   (machine == "snake.esat.kuleuven.be") ||\
+			   (machine == "horse.esat.kuleuven.be") ||\
+			   (machine == "ram.esat.kuleuven.be") ||\
+			   (machine == "rooster.esat.kuleuven.be") 
+
+request_memory =16192
+request_cpus = 24
+
+Output      = boosted_learning.condor.out
+Error       = boosted_learning.condor.err
+Log         = boosted_learning.condor.log
+
+request_walltime =10800 
+
+periodic_remove = JobStatus == 2 && \ 
+	(\ 
+	 	 ((CurrentTime - EnteredCurrentStatus) > $(request_walltime)) || \ 
+	 	 (ImageSize/1024 > $(request_memory)) \ 
+	)
+Queue

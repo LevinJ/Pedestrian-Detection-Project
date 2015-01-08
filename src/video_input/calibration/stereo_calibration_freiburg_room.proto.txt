@@ -1,0 +1,110 @@
+
+# this is a text proto file, see protocol definition at doppia/src/video_input/calibration.proto
+
+name: "Freiburg room (~20 May 2010) sequence stereo calibration"
+
+left_camera {
+
+  name: "left camera"
+
+  internal_parameters {
+	k11: 496.650593911643114
+	k12: 0
+	k13: 339.603410545535496
+
+	k21: 0  
+	k22: 497.951928183169002
+	k23: 263.479509153008280
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.226057037576637         
+        k2:  0.116638726730784
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+	# identity matrix
+		r11: 1
+		r12: 0
+		r13: 0
+
+		r21: 0
+		r22: 1
+		r23: 0
+
+		r31: 0
+		r32: 0
+		r33: 1
+	}
+
+	translation {
+	# zero vector
+		t1: 0
+		t2: 0
+		t3: 0
+	}
+  }
+
+} # end of left_camera
+
+
+
+right_camera {
+
+  name: "right camera"
+
+ internal_parameters {
+	k11: 498.577096367258207
+	k12: 0
+	k13: 327.812582105359468
+
+	k21: 0  
+	k22: 499.952173743115395       
+	k23: 252.424013139130523
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.231953700400255       
+        k2:  0.122981514672863  
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+		r11: 0.999935802415477        
+		r12: -0.005054739651712       
+		r13: -0.010141038150518
+
+		r21: 0.005076558457465         
+		r22: 0.999984852206328        
+		r23: 0.002126949016002
+
+		r31:  0.010130133362636        
+		r32: -0.002178294044003         
+		r33:  0.999946316275585
+	}
+
+	translation {
+        # in meters
+		t1: -0.358241898281069        
+		t2: -0.002032623466210        
+		t3: -0.005112240042688
+	}
+  }
+
+} # end of right_camera
+
+
+

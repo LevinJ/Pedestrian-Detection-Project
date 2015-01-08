@@ -1,0 +1,25 @@
+// This file describes a pair of stereo rectification homographies
+// see http://code.google.com/p/protobuf/ for more details
+
+package doppia_protobuf;
+
+message Homography3d
+{
+  optional float H11 = 1 [ default = 1 ];
+  optional float H12 = 2 [ default = 0 ];
+  optional float H13 = 3 [ default = 0 ];
+  optional float H21 = 4 [ default = 0 ];
+  optional float H22 = 5 [ default = 1 ];
+  optional float H23 = 6 [ default = 0 ];
+  optional float H31 = 7 [ default = 0 ];
+  optional float H32 = 8 [ default = 0 ];
+  optional float H33 = 9 [ default = 1 ];
+}
+
+message StereoRectificationHomographies
+{
+  // Homographies to get from input image coordinates to rectified (scanline aligned) coordinates
+  required Homography3d left = 1;
+  required Homography3d right = 2;
+}
+

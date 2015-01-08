@@ -1,0 +1,112 @@
+
+# this is a text proto file, see protocol definition at doppia/src/video_input/calibration.proto
+
+# Stereo camera calibration used by Andreas Ess on the Bahnhofstrasse sequence
+
+name: "Andreas Ess Bahnhofstrasse sequence stereo calibration"
+
+left_camera {
+
+  name: "left camera"
+
+  internal_parameters {
+	k11: 500.68330
+	k12: 0
+	k13: 318.57250
+
+	k21: 0  
+	k22: 500.25257 
+	k23: 247.11452
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.22225
+        k2:  0.10381
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+	# identity matrix
+		r11: 1
+		r12: 0
+		r13: 0
+
+		r21: 0
+		r22: 1
+		r23: 0
+
+		r31: 0
+		r32: 0
+		r33: 1
+	}
+
+	translation {
+	# zero vector
+		t1: 0
+		t2: 0
+		t3: 0
+	}
+  }
+
+} # end of left_camera
+
+
+
+right_camera {
+
+  name: "right camera"
+
+ internal_parameters {
+	k11: 500.80696
+	k12: 0
+	k13: 307.20573 
+
+	k21: 0  
+	k22: 500.39406 
+	k23: 233.52064
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.22738
+	k2:  0.11823
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+		r11: 0.994584465424537   
+		r12: 0.008137584213299  
+		r13: 0.103612358622704
+
+		r21: -0.008733820371460   
+		r22:  0.999947802720680   
+		r23:  0.005302095416238
+
+		r31: -0.103563804091524  
+		r32: -0.006178313463662   
+		r33:  0.994603623020164
+	}
+
+	translation {
+		# in meters
+		t1: -0.39996195   
+		t2: 0.00066913  
+		t3: 0.02245476 
+	}
+  }
+
+} # end of right_camera
+
+
+

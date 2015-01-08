@@ -1,0 +1,231 @@
+
+# this is a text proto file, see protocol definition at doppia/src/objects_detection/detector_model.proto
+
+# this model is super simple test model, aimed to work over the test_fpdw.png test image
+
+# a human readable description of the model
+detector_name: "Test detector for test_fpdw.png"
+
+# a human readable description of the dataset used for training
+training_dataset_name: "One single image test_fpdw.png"
+
+# class of the detected objects
+# (numbering consistent with stixels.proto )
+# enum DetectorTypes { LinearSvm=0; SoftCascadeOverIntegralChannels=10; HoughForest=20; }
+detector_type: SoftCascadeOverIntegralChannels
+
+# to be set if detector_type == SoftCascadeOverIntegralChannels
+soft_cascade_model {
+
+stages { # first stage
+
+  #enum FeatureTypes { Stumps=0; Level2DecisionTree=10; }
+  feature_type: Level2DecisionTree
+
+
+  level2_decision_tree {
+
+    nodes {
+
+    # id of this tree node
+    id:1
+
+    # node id of the parent
+    # parent_id == id for the tree root
+    parent_id:1
+
+    # binary output value of the parent to which this node should be attached
+    #parent_value:0
+
+    decision_stump {
+    
+        feature {
+            channel_index: 8 # channel 8 is U from LUV
+            box {
+                min_corner { 
+                    x: 0 
+                    y: 0
+                }
+
+                max_corner { 
+                    x: 20 
+                    y: 10
+                }
+            }
+        }
+  
+        # thresholding the corresponding rectangle provides the a weak binary classifier
+        # expected U value ~=~ 220. (20*10*200 = 42000)
+        feature_threshold: 42000
+
+       # if true will evaluate (feature > threshold), 
+       # if false, will evaluate (feature < threshold)
+       larger_than_threshold: true
+    } # end of decision_stump
+
+    } # end of node 1
+
+    nodes {
+        id:2
+        parent_id:1
+        parent_value: true
+        decision_stump {
+            feature {
+                channel_index: 8 # channel 8 is U from LUV
+                box {
+                    min_corner { 
+                        x: 0 
+                        y: 0
+                    }
+                    max_corner { 
+                        x: 20 
+                        y: 10
+                    } } 
+            } 
+            feature_threshold: -1 # dummy feature
+            larger_than_threshold: true
+        } # end of decision_stump
+    } # end of node 2
+
+    nodes {
+        id:3
+        parent_id:1
+        parent_value: false
+        decision_stump {
+            feature {
+                channel_index: 8 # channel 8 is U from LUV
+                box {
+                    min_corner { 
+                        x: 0 
+                        y: 0
+                    }
+                    max_corner { 
+                        x: 20 
+                        y: 10
+                    } } 
+            } 
+            feature_threshold: -1 # dummy feature
+            larger_than_threshold: false
+        } # end of decision_stump
+    } # end of node 3
+
+   } # end of level2_decision_tree
+
+
+  # weight of corresponding binary classifier output
+  weight: 0.5
+
+  # score threshold at the current stage (after evaluating the corresponding rectangle)
+  cascade_threshold: 0.45
+} # end of first stage
+
+
+stages { # second stage
+
+
+  #enum FeatureTypes { Stumps=0; Level2DecisionTree=10; }
+  feature_type: Level2DecisionTree
+
+
+  level2_decision_tree {
+
+    nodes {
+
+    # id of this tree node
+    id:1
+
+    # node id of the parent
+    # parent_id == id for the tree root
+    parent_id:1
+
+    # binary output value of the parent to which this node should be attached
+    #parent_value:0
+
+    decision_stump {
+    
+        feature {
+            channel_index: 9 # channel 9 is V from LUV
+            box {
+                min_corner { 
+                    x: 0 
+                    y: 10
+                }
+
+                max_corner { 
+                    x: 10 
+                    y: 30
+                }
+            }
+        }
+  
+        # thresholding the corresponding rectangle provides the a weak binary classifier
+        # expected V value ~=~ 230. (20*10*220 = 44000)
+        feature_threshold: 44000
+
+       # if true will evaluate (feature > threshold), 
+       # if false, will evaluate (feature < threshold)
+       larger_than_threshold: true
+    } # end of decision_stump
+
+    } # end of node 1
+
+    nodes {
+        id:2
+        parent_id:1
+        parent_value: true
+        decision_stump {
+            feature {
+                channel_index: 9 # channel 9 is V from LUV
+                box {
+                    min_corner { 
+                        x: 0 
+                        y: 10
+                    }
+                    max_corner { 
+                        x: 10 
+                        y: 30
+                    } } 
+            } 
+            feature_threshold: -1 # dummy feature
+            larger_than_threshold: true
+        } # end of decision_stump
+    } # end of node 2
+
+    nodes {
+        id:3
+        parent_id:1
+        parent_value: false
+        decision_stump {
+            feature {
+                channel_index: 9 # channel 9 is U from LUV
+                box {
+                    min_corner { 
+                        x: 0 
+                        y: 10
+                    }
+                    max_corner { 
+                        x: 10 
+                        y: 30
+                    } } 
+            } 
+            feature_threshold: -1 # dummy feature
+            larger_than_threshold: false
+        } # end of decision_stump
+    } # end of node 3
+
+   } # end of level2_decision_tree
+
+
+  # weight of corresponding binary classifier output
+  weight: 0.5
+
+  # score threshold at the current stage (after evaluating the corresponding rectangle)
+  cascade_threshold: 0.65
+
+} # end of second stage
+
+
+
+} # end of soft_cascade_model
+	
+

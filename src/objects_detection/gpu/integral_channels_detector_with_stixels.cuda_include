@@ -1,0 +1,921 @@
+
+
+namespace doppia {
+namespace objects_detection {
+
+
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+// FIXME how to reduce redudancy between stixel and non-stixel code ? add onre more template parameter ?
+
+/// This kernel is called for each position where we which to detect objects
+/// we assume that the border effects where already checked when computing the DetectorSearchRange
+/// thus we do not do any checks here.
+/// This kernel is based on integral_channels_detector_kernel,
+/// but does detections for all scales instead of a single scale
+/// @see IntegralChannelsDetector
+template <bool use_the_model_cascade, typename DetectionCascadeStageType>
+__global__
+void integral_channels_detector_over_all_scales_with_stixels_kernel_v0(
+        const gpu_integral_channels_t::KernelConstData integral_channels,
+        const int max_search_range_min_x, const int max_search_range_min_y,
+        const int max_search_range_width, const int max_search_range_height,
+        const gpu_scales_data_t::KernelConstData scales_data,
+        const gpu_stixels_t::KernelConstData stixels,
+        const gpu_half_window_widths_t::KernelConstData half_window_widths,
+        const typename Cuda::DeviceMemory<DetectionCascadeStageType, 2>::KernelConstData detection_cascade_per_scale,
+        const float score_threshold,
+        gpu_detections_t::KernelData gpu_detections)
+{
+    const int
+            delta_x = blockIdx.x * blockDim.x + threadIdx.x,
+            delta_y = blockIdx.y * blockDim.y + threadIdx.y,
+            x = max_search_range_min_x + delta_x,
+            y = max_search_range_min_y + delta_y;
+
+    // FIXME stixel choice depends on scale, arrgghh !
+
+    float max_detection_score = -1E10; // initialized with a very negative value
+    size_t max_detection_scale_index = 0;
+
+    for(size_t scale_index=0; scale_index < scales_data.size[0]; scale_index +=1)
+    {
+        // we copy the search stage from global memory to thread memory
+        // (here using copy or reference seems to make no difference, 11.82 Hz in both cases)
+        const gpu_scale_datum_t::search_range_t search_range = scales_data.data[scale_index].search_range;
+        // (in current code, we ignore the gpu_scale_datum_t stride value)
+
+        // we order the if conditions putting most likelly ones first
+        if( (y > search_range.max_corner().y())
+            or (y < search_range.min_corner().y())
+            or (x < search_range.min_corner().x())
+            or (x > search_range.max_corner().x()) )
+        {
+            // current pixel is out of this scale search range, we skip computations
+            continue;
+        }
+
+        // we copy the search stage from global memory to thread memory
+        const int half_window_width = half_window_widths.data[scale_index];
+        const gpu_stixel_t stixel = stixels.data[x+half_window_width];
+
+        if((scale_index < stixel.min_scale_index) or (scale_index > stixel.max_scale_index))
+        {
+            // current pixel is out of the stixel scale range, we can skip it
+            continue;
+        }
+
+        if((y < stixel.min_y) or (y > stixel.max_y))
+        {
+            // current pixel is out of the stixel y range, we can skip it
+            continue;
+        }
+
+        //bool should_skip_scale = false;
+
+        // retrieve current score value
+        float detection_score = 0;
+
+        const size_t
+                cascade_length = detection_cascade_per_scale.size[0],
+                scale_offset = scale_index * detection_cascade_per_scale.stride[0];
+
+        for(size_t stage_index=0; stage_index < cascade_length; stage_index+=1)
+        {
+            const size_t index = scale_offset + stage_index;
+
+            // we copy the cascade stage from global memory to thread memory
+            // (when using a reference code runs at ~4.35 Hz, with copy it runs at ~4.55 Hz)
+            const DetectionCascadeStageType stage = detection_cascade_per_scale.data[index];
+
+            update_detection_score(x, y, stage, integral_channels, detection_score);
+
+            if((not use_the_model_cascade) and
+               use_hardcoded_cascade and (stage_index > hardcoded_cascade_start_stage) and (detection_score < 0))
+            {
+                // this is not an object of the class we are looking for
+                // do an early stop of this pixel
+
+                // FIXME this is an experiment
+                // since this is a really bad detection, we also skip one scale
+                //scale_index += 1;
+                //scale_index += 3;
+                //scale_index += 10;
+                //should_skip_scale = true;
+                break;
+            }
+
+            if(use_the_model_cascade and detection_score < stage.cascade_threshold)
+            {
+                // this is not an object of the class we are looking for
+                // do an early stop of this pixel
+                detection_score = -1E5; // since re-ordered classifiers may have a "very high threshold in the middle"
+
+                // FIXME this is an experiment
+                // since this is a really bad detection, we also skip one scale
+                //if(stage_index < hardcoded_cascade_start_stage)
+                {
+                    //scale_index += 1;
+                    //scale_index += 3;
+                }
+
+                break;
+            }
+
+        } // end of "for each stage"
+
+
+        if(detection_score > max_detection_score)
+        {
+            max_detection_score = detection_score;
+            max_detection_scale_index = scale_index;
+        }
+        /*
+        // we only skip the scale if all the pixels in the warp agree
+        if(__all(should_skip_scale))
+        {
+            // FIXME this is an experiment
+            //scale_index += 1;
+            scale_index += 3;
+            //scale_index += 10;
+        }
+*/
+
+    } // end of "for each scale"
+
+
+    // >= to be consistent with Markus's code
+    if(max_detection_score >= score_threshold)
+    {
+        // we got a detection
+        add_detection(gpu_detections, x, y, max_detection_scale_index, max_detection_score);
+
+    } // end of "if detection score is high enough"
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_kernel_v0
+
+
+template <bool use_the_model_cascade, typename DetectionCascadeStageType>
+__global__
+void integral_channels_detector_over_all_scales_with_stixels_kernel_v1(
+        const gpu_integral_channels_t::KernelConstData integral_channels,
+        const int max_search_range_min_x, const int max_search_range_min_y,
+        const int /*max_search_range_width*/, const int /*max_search_range_height*/,
+        const gpu_scales_data_t::KernelConstData scales_data,
+        const gpu_stixels_t::KernelConstData stixels,
+        const gpu_half_window_widths_t::KernelConstData half_window_widths,
+        const typename Cuda::DeviceMemory<DetectionCascadeStageType, 2>::KernelConstData detection_cascade_per_scale,
+        const float score_threshold,
+        gpu_detections_t::KernelData gpu_detections)
+{
+    const int
+            delta_x = blockIdx.x * blockDim.x + threadIdx.x,
+            delta_y = blockIdx.y * blockDim.y + threadIdx.y,
+            x = max_search_range_min_x + delta_x,
+            y = max_search_range_min_y + delta_y;
+
+    const int
+            cascade_length = detection_cascade_per_scale.size[0],
+            num_scales = scales_data.size[0];
+
+    // FIXME stixel choice depends on scale, arrgghh !
+
+    float max_detection_score = -1E10; // initialized with a very negative value
+    int max_detection_scale_index = 0;
+
+    for(int scale_index=0; scale_index < num_scales; scale_index +=1)
+    {
+        // we copy the search stage from global memory to thread memory
+        // (here using copy or reference seems to make no difference, 11.82 Hz in both cases)
+        const gpu_scale_datum_t::search_range_t search_range = scales_data.data[scale_index].search_range;
+        // (in current code, we ignore the gpu_scale_datum_t stride value)
+
+
+        if( (y > search_range.max_corner().y())
+            or (y < search_range.min_corner().y())
+            or (x < search_range.min_corner().x())
+            or (x > search_range.max_corner().x()) )
+        {
+            // current pixel is out of this scale search range, we skip computations
+            // (nothing to do here)
+        }
+        else
+        {
+            // we copy the search stage from global memory to thread memory
+            const int half_window_width = half_window_widths.data[scale_index];
+            const gpu_stixel_t stixel = stixels.data[x+half_window_width];
+
+            bool inside_stixels_range = ((y >= stixel.min_y) and (y <= stixel.max_y));
+
+            // check the scales range
+            inside_stixels_range &= ((scale_index >= stixel.min_scale_index) and (scale_index <= stixel.max_scale_index));
+
+            if(inside_stixels_range)
+            {
+                // inside search range
+
+                // retrieve current score value
+                float detection_score = 0;
+
+                const int scale_offset = scale_index * detection_cascade_per_scale.stride[0];
+
+                for(int stage_index=0; stage_index < cascade_length; stage_index+=1)
+                {
+                    const int index = scale_offset + stage_index;
+
+                    // we copy the cascade stage from global memory to thread memory
+                    // (when using a reference code runs at ~4.35 Hz, with copy it runs at ~4.55 Hz)
+                    const DetectionCascadeStageType stage = detection_cascade_per_scale.data[index];
+
+                    if((not use_the_model_cascade) or detection_score > stage.cascade_threshold)
+                    {
+                        update_detection_score(x, y, stage, integral_channels, detection_score);
+                    }
+                    else
+                    {
+                        // detection score is below cascade threshold,
+                        // we are not interested on this object
+                        detection_score = -1E5; // set to a value lower than score_threshold
+                        break;
+                    }
+
+                } // end of "for each stage"
+
+                if(detection_score > max_detection_score)
+                {
+                    max_detection_score = detection_score;
+                    max_detection_scale_index = scale_index;
+                }
+
+            }
+            else
+            {
+                // not in stixel range
+                // (nothing to do here)
+            }
+
+        } // end of "if inside the search range or not"
+
+    } // end of "for each scale"
+
+
+    // >= to be consistent with Markus's code
+    if(max_detection_score >= score_threshold)
+    {
+        // we got a detection
+        add_detection(gpu_detections, x, y, max_detection_scale_index, max_detection_score);
+
+    } // end of "if detection score is high enough"
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_kernel_v1
+
+
+
+/// to only be used with integral_channels_detector_over_all_scales_with_stixels_impl_v1
+template <bool use_the_model_cascade, typename DetectionCascadeStageType>
+__global__
+void integral_channels_detector_over_all_scales_with_stixels_kernel_v2(
+        const gpu_integral_channels_t::KernelConstData integral_channels,
+        const gpu_scales_data_t::KernelConstData scales_data,
+        const gpu_stixels_t::KernelConstData stixels,
+        const gpu_half_window_widths_t::KernelConstData half_window_widths,
+        const typename Cuda::DeviceMemory<DetectionCascadeStageType, 2>::KernelConstData detection_cascade_per_scale,
+        const float score_threshold,
+        gpu_detections_t::KernelData gpu_detections)
+{
+    const int
+            delta_x = blockIdx.x * blockDim.x + threadIdx.x,
+            delta_y = blockIdx.y * blockDim.y + threadIdx.y,
+            delta_scale = blockIdx.z * blockDim.z + threadIdx.z,
+            //x = max_search_range_min_x + delta_x;
+            x = delta_x; // max_search_range_min_x == 0
+
+
+    const gpu_stixel_t stixel = stixels.data[x];
+    const int
+            y = stixel.max_y - delta_y, // we do a minus so we are close to the ground in occluded areas
+            detection_y = y;
+
+    const int
+            scale_index = stixel.min_scale_index + delta_scale,
+            num_scales = scales_data.size[0];
+
+    if(scale_index >= num_scales)
+    {
+        // out of scales range
+        // (nothing to do here)
+        return;
+    }
+
+    // we copy the search stage from global memory to thread memory
+    const gpu_scale_datum_t::search_range_t search_range = scales_data.data[scale_index].search_range;
+
+    const int
+            half_window_width = half_window_widths.data[scale_index],
+            detection_x = x - half_window_width;
+
+    if( (detection_y > search_range.max_corner().y())
+        or (detection_y < search_range.min_corner().y())
+        or (detection_x < search_range.min_corner().x())
+        or (detection_x > search_range.max_corner().x()) )
+    {
+        // current pixel is out of this scale search range, we skip computations
+        // (nothing to do here)
+    }
+    else
+    { // inside search range
+
+        // retrieve current score value
+        float detection_score = 0;
+
+        const int scale_offset = scale_index * detection_cascade_per_scale.stride[0];
+        const int cascade_length = detection_cascade_per_scale.size[0];
+
+        for(int stage_index=0; stage_index < cascade_length; stage_index+=1)
+        {
+            const int index = scale_offset + stage_index;
+
+            // we copy the cascade stage from global memory to thread memory
+            // (when using a reference code runs at ~4.35 Hz, with copy it runs at ~4.55 Hz)
+            const DetectionCascadeStageType stage = detection_cascade_per_scale.data[index];
+
+            if((not use_the_model_cascade) or detection_score > stage.cascade_threshold)
+            {
+                update_detection_score(x, y, stage, integral_channels, detection_score);
+            }
+            else
+            {
+                // detection score is below cascade threshold,
+                // we are not interested on this object
+                detection_score = -1E5; // set to a value lower than score_threshold
+                break;
+            }
+
+        } // end of "for each stage"
+
+        // >= to be consistent with Markus's code
+        if(detection_score >= score_threshold)
+        {
+            const bool reweight_score = false;
+            if(reweight_score)
+            {
+                // FIXME HARDCODED VALUES
+                // 60 pixels -> 16  shrunk pixels
+                const float score_scaling = (1 - (abs(delta_y - 8) / 8.0)) + 1;
+                detection_score *= score_scaling;
+            }
+
+
+            // we got a detection
+            add_detection(gpu_detections, detection_x, detection_y, scale_index, detection_score);
+
+        } // end of "if detection score is high enough"
+
+    } // end of "if inside the search range or not"
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_kernel_v2
+
+
+/// to only be used with integral_channels_detector_over_all_scales_with_stixels_impl_v1
+/// this method only uses the y_stride, x_stride does not make a lot of sense when using stixels
+/// since the actual stride depends on the scale, and the scale depends on x.
+template <bool use_the_model_cascade, typename DetectionCascadeStageType>
+__global__
+void integral_channels_detector_over_all_scales_with_stixels_kernel_v3_y_stride(
+        const gpu_integral_channels_t::KernelConstData integral_channels,
+        const gpu_scales_data_t::KernelConstData scales_data,
+        const gpu_stixels_t::KernelConstData stixels,
+        const gpu_half_window_widths_t::KernelConstData half_window_widths,
+        const typename Cuda::DeviceMemory<DetectionCascadeStageType, 2>::KernelConstData detection_cascade_per_scale,
+        const float score_threshold,
+        gpu_detections_t::KernelData gpu_detections)
+{
+
+    const int
+            delta_x = blockIdx.x * blockDim.x + threadIdx.x,
+            delta_scale = blockIdx.z * blockDim.z + threadIdx.z,
+            //x = max_search_range_min_x + delta_x;
+            x = delta_x; // max_search_range_min_x == 0
+
+    const gpu_stixel_t stixel = stixels.data[x];
+
+    const int
+            scale_index = stixel.min_scale_index + delta_scale,
+            num_scales = scales_data.size[0];
+
+    if(scale_index >= num_scales)
+    {
+        // out of scales range
+        // (nothing to do here)
+        return;
+    }
+
+    // we copy the search stage from global memory to thread memory
+    // (here using copy or reference seems to make no speed difference)
+    const gpu_scale_datum_t scale_datum = scales_data.data[scale_index];
+    const gpu_scale_datum_t::search_range_t &search_range = scale_datum.search_range;
+    const gpu_scale_datum_t::stride_t &stride = scale_datum.stride;
+
+    const int
+            delta_y = (blockIdx.y * blockDim.y + threadIdx.y)*stride.y(),
+            y = stixel.max_y - delta_y, // we do a minus so we are close to the ground in occluded areas
+            detection_y = y,
+            half_window_width = half_window_widths.data[scale_index],
+            detection_x = x - half_window_width;
+
+    if( (detection_y > search_range.max_corner().y())
+        or (detection_y < search_range.min_corner().y())
+        or (detection_x < search_range.min_corner().x())
+        or (detection_x > search_range.max_corner().x()) )
+    {
+        // current pixel is out of this scale search range, we skip computations
+        // (nothing to do here)
+    }
+    else
+    { // inside search range
+        compute_specific_detection<use_the_model_cascade, DetectionCascadeStageType>
+                (detection_x, detection_y, scale_index, score_threshold,
+                 integral_channels, detection_cascade_per_scale, gpu_detections);
+    } // end of "if inside the search range or not"
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_kernel_v3_y_stride
+
+
+/// to only be used with integral_channels_detector_over_all_scales_with_stixels_impl_v2_y_stride_and_scales_inhibition
+/// this method only uses the y_stride, x_stride does not make a lot of sense when using stixels
+/// since the actual stride depends on the scale, and the scale depends on x.
+/// additionally does scales inhibition
+template <bool use_the_model_cascade, typename DetectionCascadeStageType>
+__global__
+void integral_channels_detector_over_all_scales_with_stixels_kernel_v4_y_stride_and_scales_inhibition(
+        const gpu_integral_channels_t::KernelConstData integral_channels,
+        const gpu_scales_data_t::KernelConstData scales_data,
+        const gpu_stixels_t::KernelConstData stixels,
+        const gpu_half_window_widths_t::KernelConstData half_window_widths,
+        const typename Cuda::DeviceMemory<DetectionCascadeStageType, 2>::KernelConstData detection_cascade_per_scale,
+        const float score_threshold,
+        gpu_detections_t::KernelData gpu_detections,
+        inhibition_scores_map_t::KernelData inhibition_score_checkpoints_map)
+{
+
+    const int
+            delta_x = blockIdx.x * blockDim.x + threadIdx.x,
+            delta_scale = blockIdx.z * blockDim.z + threadIdx.z,
+            //x = max_search_range_min_x + delta_x;
+            x = delta_x; // max_search_range_min_x == 0
+
+    const gpu_stixel_t stixel = stixels.data[x];
+
+    // using alternating scales make the scales inhibition more effective
+    int scale_index = stixel.reference_scale_index;
+    if(delta_scale % 2) // % 2 is a fast operator
+    {
+        scale_index += delta_scale/2;
+    }
+    else
+    {
+        scale_index -= delta_scale/2;
+    }
+
+    const int num_scales = scales_data.size[0];
+
+    if(scale_index >= num_scales)
+    {
+        // out of scales range
+        // (nothing to do here)
+        return;
+    }
+
+    // we copy the search stage from global memory to thread memory
+    // (here using copy or reference seems to make no speed difference)
+    const gpu_scale_datum_t scale_datum = scales_data.data[scale_index];
+    const gpu_scale_datum_t::search_range_t &search_range = scale_datum.search_range;
+    const gpu_scale_datum_t::stride_t &stride = scale_datum.stride;
+
+    const int
+            delta_y = (blockIdx.y * blockDim.y + threadIdx.y)*stride.y(),
+            y = stixel.max_y - delta_y, // we do a minus so we are close to the ground in occluded areas
+            detection_y = y,
+            half_window_width = half_window_widths.data[scale_index],
+            detection_x = x - half_window_width;
+
+    if( (detection_y > search_range.max_corner().y())
+        or (detection_y < search_range.min_corner().y())
+        or (detection_x < search_range.min_corner().x())
+        or (detection_x > search_range.max_corner().x()) )
+    {
+        // current pixel is out of this scale search range, we skip computations
+        // (nothing to do here)
+    }
+    else
+    { // inside search range
+
+        const int
+                cascade_length = detection_cascade_per_scale.size[0],
+                scale_offset = scale_index * detection_cascade_per_scale.stride[0];
+
+        const int checkpoint_zero_index = (detection_y*inhibition_score_checkpoints_map.stride[1])
+                                          + (detection_x*inhibition_score_checkpoints_map.stride[0]);
+        inhibition_checkpoints_score_t *inhibition_score_checkpoints =
+                &inhibition_score_checkpoints_map.data[checkpoint_zero_index];
+
+        // retrieve current score value
+        float detection_score = 0;
+
+        // (we use int instead of size_t, as indicated by Cuda Best Programming Practices, section 6.3)
+        // (using int of size_t moved from 1.48 Hz to 1.53 Hz)
+
+        for(int stage_index=0; stage_index < cascade_length; stage_index+=1)
+        {
+            const int index = scale_offset + stage_index;
+
+            // we copy the cascade stage from global memory to thread memory
+            // (when using a reference code runs at ~4.35 Hz, with copy it runs at ~4.55 Hz)
+            const DetectionCascadeStageType stage = detection_cascade_per_scale.data[index];
+
+            if((not use_the_model_cascade) or detection_score > stage.cascade_threshold)
+            {
+                update_detection_score(detection_x, detection_y, stage, integral_channels, detection_score);
+
+                // check for inhibition checkpoint scores, and updates if needed
+                {
+
+                    // to be useful the inhibition needs to be able to abort things before the soft cascade does
+                    // since most candidate windows have very few evaluations,
+                    // the scales inhibition check points are on the very early stages.
+
+                    // FIXME is the compiler smart enough to put the ifs/elses outside of the for loop ?
+                    // (or we should do that by hand/templates ?)
+                    inhibition_checkpoints_score_t *score_checkpoint_p = NULL;
+                    if(stage_index == 2)
+                    {
+                        score_checkpoint_p = &inhibition_score_checkpoints[0];
+                    }
+                    else if(stage_index == 4)
+                    {
+                        score_checkpoint_p = &inhibition_score_checkpoints[1];
+                    }
+                    else if(stage_index == 8)
+                    {
+                        score_checkpoint_p = &inhibition_score_checkpoints[2];
+                    }
+                    else if(stage_index == 16)
+                    {
+                        score_checkpoint_p = &inhibition_score_checkpoints[3];
+                    }
+                    else if(stage_index == 32)
+                    {
+                        score_checkpoint_p = &inhibition_score_checkpoints[4];
+                    }
+
+                    if(score_checkpoint_p != NULL)
+                    {
+                        // we convert from uint to float
+                        const float score_checkpoint = (*score_checkpoint_p - 1e8f)/1e7f;
+
+                        if(detection_score <= score_checkpoint)
+                        {
+
+                            // detection score at current checkpoint is below the desired score,
+                            // this means that at the same position, but different scale someone has already
+                            // found a much stronger detection
+                            detection_score = -1E5; // set to a value lower than score_threshold
+                            break;
+                        }
+                        else
+                        { // detection_score > score_checkpoint
+
+                            // the current detection has the highest score up to now,
+                            // we will update the score map
+
+                            // FIXME this is an horrible heuristic
+                            //const float new_checkpoint_float_score = detection_score - 0.015;
+                            const float new_checkpoint_float_score = detection_score - 0;
+
+                            // we convert from float to int
+                            const inhibition_checkpoints_score_t new_checkpoint_score =
+                                    static_cast<inhibition_checkpoints_score_t>((new_checkpoint_float_score * 1e7f) + 1e8f);
+
+                            const inhibition_checkpoints_score_t old =
+                                    atomicMax(score_checkpoint_p, new_checkpoint_score);
+                        }
+
+                    } // end of "if at checkpoint stage"
+
+                } // end of "inhibition checkpoint scores handling"
+
+            }
+            else
+            {
+                // detection score is below cascade threshold,
+                // we are not interested on this object
+                detection_score = -1E5; // set to a value lower than score_threshold
+                break;
+            }
+
+        } // end of "for each stage"
+
+        // >= to be consistent with Markus's code
+        if(detection_score >= score_threshold)
+        {
+            // we got a detection
+            add_detection(gpu_detections, detection_x, detection_y, scale_index, detection_score);
+
+        } // end of "if detection score is high enough"
+
+    } // end of "if inside the search range or not"
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_kernel_v4_y_stride_and_scales_inhibition
+
+// ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-
+
+/// this method directly adds elements into the gpu_detections vector
+/// @deprecated what does this method offer respect to v1 ?
+template<typename GpuDetectionCascadePerScaleType>
+void integral_channels_detector_over_all_scales_with_stixels_impl_v0(
+        gpu_integral_channels_t &integral_channels,
+        gpu_scale_datum_t::search_range_t &max_search_range,
+        gpu_scales_data_t &scales_data,
+        gpu_stixels_t &stixels,
+        gpu_half_window_widths_t &half_window_widths,
+        GpuDetectionCascadePerScaleType &detection_cascade_per_scale,
+        const float score_threshold,
+        const bool use_the_model_cascade,
+        gpu_detections_t& gpu_detections,
+        size_t &num_detections)
+{
+
+    typedef typename GpuDetectionCascadePerScaleType::Type CascadeStageType;
+    const int
+            max_search_range_min_x = max_search_range.min_corner().x(),
+            max_search_range_min_y = max_search_range.min_corner().y(),
+            max_search_range_width = max_search_range.max_corner().x() - max_search_range_min_x,
+            max_search_range_height = max_search_range.max_corner().y() - max_search_range_min_y;
+
+    // CUDA occupancy calculator pointed out
+    // 192 (or 256) threads as a sweet spot for the current setup (revision 1798:ebfd7914cdfd)
+    const int
+            num_threads = 192, // ~4.8 Hz
+            //num_threads = 256, // ~4.5 Hz
+            // we want to keep the vertical elements of the block low so that we can efficiently search
+            // in the scales that have strong vertical constraints
+            //block_y = 4, block_x = num_threads / block_y; // runs at ~ 15 Hz too
+            block_y = 2, block_x = num_threads / block_y; // slightly faster than block_y = 4
+    //block_y = 16, block_x = num_threads / block_y; // 16 corresponds to 64 pixels
+
+
+    dim3 block_dimensions(block_x, block_y);
+
+    dim3 grid_dimensions(div_up(max_search_range_width, block_dimensions.x),
+                         div_up(max_search_range_height, block_dimensions.y));
+
+
+    // prepare variables for kernel call --
+    bind_integral_channels_texture(integral_channels);
+    move_num_detections_from_cpu_to_gpu(num_detections);
+
+    // call the GPU kernel --
+    if(use_the_model_cascade)
+    {
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v1
+                <true, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          max_search_range_min_x, max_search_range_min_y,
+                                                          max_search_range_width, max_search_range_height,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections);
+    }
+    else
+    {
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v1
+                <false, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          max_search_range_min_x, max_search_range_min_y,
+                                                          max_search_range_width, max_search_range_height,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections);
+    }
+
+    cuda_safe_call( cudaGetLastError() );
+    cuda_safe_call( cudaDeviceSynchronize() );
+
+
+    // clean-up variables after kernel call --
+    unbind_integral_channels_texture();
+    move_num_detections_from_gpu_to_cpu(num_detections);
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_impl_v0(...)
+
+
+/// this method directly adds elements into the gpu_detections vector
+template<typename GpuDetectionCascadePerScaleType>
+void integral_channels_detector_over_all_scales_with_stixels_impl_v1_y_stride(
+        gpu_integral_channels_t &integral_channels,
+        gpu_scale_datum_t::search_range_t &max_search_range,
+        const int max_search_range_width, const int max_search_range_height,
+        const int num_scales_to_evaluate,
+        gpu_scales_data_t &scales_data,
+        gpu_stixels_t &stixels,
+        gpu_half_window_widths_t &half_window_widths,
+        GpuDetectionCascadePerScaleType &detection_cascade_per_scale,
+        const float score_threshold,
+        const bool use_the_model_cascade,
+        gpu_detections_t& gpu_detections,
+        size_t &num_detections)
+{
+
+    typedef typename GpuDetectionCascadePerScaleType::Type CascadeStageType;
+    //const int
+    //max_search_range_min_x = max_search_range.min_corner().x(),
+    //max_search_range_min_y = max_search_range.min_corner().y(),
+    //max_search_range_width = max_search_range.max_corner().x() - max_search_range_min_x,
+    //max_search_range_height = max_search_range.max_corner().y() - max_search_range_min_y;
+    //max_search_range_width = 160, // 160 == 640 / (shrinking_factor == 4), and yes we will handle border conditions on the fly
+    //max_search_range_height = 16; // 16 == (30 [pixels] *2) / (shrinking_factor == 4)
+
+    // CUDA occupancy calculator pointed out
+    // 192 (or 256) threads as a sweet spot for the current setup (revision 1798:ebfd7914cdfd)
+    const int
+            num_threads = 128, //
+            //num_threads = 192, // ~4.8 Hz
+            //num_threads = 256, // ~4.5 Hz
+            num_scales = num_scales_to_evaluate,
+            //block_z = num_scales,
+            //block_z = 2,
+            block_z = 1,
+            //block_y = 16, block_x = 1; // runs at 28.04 Hz
+            //block_y = 2,
+            block_y = 16, // ~145 Hz
+            //block_y = 8,
+            //block_y = 32,
+            block_x = num_threads / (block_y*block_z); // runs at 26.84 Hz
+
+    //block_y = 4, block_x = num_threads / block_y; // runs at ~ 15 Hz too
+    //block_y = 16, block_x = 1;// block_x = num_threads / block_y; // 16 corresponds to 64 pixels
+
+    dim3 block_dimensions(block_x, block_y, block_z);
+    block_dimensions = dim3(8, 20, 1); // FIXME hardcoded to run on the visics laptop, reaches 80 Hz
+
+    dim3 grid_dimensions(div_up(max_search_range_width, block_dimensions.x),
+                         div_up(max_search_range_height, block_dimensions.y),
+                         div_up(num_scales, block_dimensions.z));
+
+    // prepare variables for kernel call --
+    bind_integral_channels_texture(integral_channels);
+    move_num_detections_from_cpu_to_gpu(num_detections);
+
+    // call the GPU kernel --
+    if(use_the_model_cascade)
+    {
+        //integral_channels_detector_over_all_scales_with_stixels_kernel_v2
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v3_y_stride
+                <true, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections);
+    }
+    else
+    {
+        //integral_channels_detector_over_all_scales_with_stixels_kernel_v2
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v3_y_stride
+                <false, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections);
+    }
+
+    cuda_safe_call( cudaGetLastError() );
+    cuda_safe_call( cudaDeviceSynchronize() );
+
+    // clean-up variables after kernel call --
+    unbind_integral_channels_texture();
+    move_num_detections_from_gpu_to_cpu(num_detections);
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_impl_v1_y_stride(...)
+
+
+/// this method directly adds elements into the gpu_detections vector
+template<typename GpuDetectionCascadePerScaleType>
+void integral_channels_detector_over_all_scales_with_stixels_impl_v2_y_stride_and_scales_inhibition(
+        gpu_integral_channels_t &integral_channels,
+        gpu_scale_datum_t::search_range_t &max_search_range,
+        const int max_search_range_width, const int max_search_range_height,
+        const int num_scales_to_evaluate,
+        gpu_scales_data_t &scales_data,
+        gpu_stixels_t &stixels,
+        gpu_half_window_widths_t &half_window_widths,
+        GpuDetectionCascadePerScaleType &detection_cascade_per_scale,
+        const float score_threshold,
+        const bool use_the_model_cascade,
+        gpu_detections_t& gpu_detections,
+        size_t &num_detections)
+{
+    typedef typename GpuDetectionCascadePerScaleType::Type CascadeStageType;
+
+    const int
+            //num_threads = 192, // ~4.8 Hz, 256 -> ~4.5 Hz
+            //block_z = 1, block_y = 32, block_x = num_threads / (block_y*block_z); // runs at 26.84 Hz
+            block_z = 1, block_y = 16, block_x = 8; // on visics laptop, reaches 80 Hz
+            // (with shrinking factor 4, block_y = 16 means 64 pixels height)
+
+    dim3 block_dimensions(block_x, block_y, block_z);
+
+    dim3 grid_dimensions(div_up(max_search_range_width, block_dimensions.x),
+                         div_up(max_search_range_height, block_dimensions.y),
+                         div_up(num_scales_to_evaluate, block_dimensions.z));
+
+    // prepare variables for kernel call --
+    initalize_inhibition_scores_map(integral_channels);
+    bind_integral_channels_texture(integral_channels);
+    move_num_detections_from_cpu_to_gpu(num_detections);
+
+    // call the GPU kernel --
+    if(use_the_model_cascade)
+    {
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v4_y_stride_and_scales_inhibition
+                <true, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections,
+                                                          inhibition_scores_map);
+    }
+    else
+    {
+        integral_channels_detector_over_all_scales_with_stixels_kernel_v4_y_stride_and_scales_inhibition
+                <false, CascadeStageType>
+                <<<grid_dimensions, block_dimensions>>> (
+                                                          integral_channels,
+                                                          scales_data, stixels, half_window_widths,
+                                                          detection_cascade_per_scale,
+                                                          score_threshold,
+                                                          gpu_detections,
+                                                          inhibition_scores_map);
+    }
+
+    cuda_safe_call( cudaGetLastError() );
+    cuda_safe_call( cudaDeviceSynchronize() );
+
+    // clean-up variables after kernel call --
+    unbind_integral_channels_texture();
+    move_num_detections_from_gpu_to_cpu(num_detections);
+
+    return;
+} // end of integral_channels_detector_over_all_scales_with_stixels_impl_v2_y_stride_and_scales_inhibition(...)
+
+
+/// this method directly adds elements into the gpu_detections vector
+/// this version takes into account the ground plane and stixel constraints
+/// @warning will skip all detections once the vector is full
+void integral_channels_detector_over_all_scales(
+        gpu_integral_channels_t &integral_channels,
+        gpu_scale_datum_t::search_range_t &max_search_range,
+        const int max_search_range_width, const int max_search_range_height,
+        const int num_scales_to_evaluate,
+        gpu_scales_data_t &scales_data,
+        gpu_stixels_t &stixels,
+        gpu_half_window_widths_t &gpu_half_window_widths,
+        gpu_detection_cascade_per_scale_t &detection_cascade_per_scale,
+        const float score_threshold,
+        const bool use_the_model_cascade,
+        gpu_detections_t& gpu_detections,
+        size_t &num_detections)
+{
+    // call the templated generic implementation
+    //integral_channels_detector_over_all_scales_with_stixels_impl_v0(
+    integral_channels_detector_over_all_scales_with_stixels_impl_v1_y_stride(
+    //integral_channels_detector_over_all_scales_with_stixels_impl_v2_y_stride_and_scales_inhibition(
+                integral_channels,
+                max_search_range, max_search_range_width, max_search_range_height,
+                num_scales_to_evaluate,
+                scales_data, stixels, gpu_half_window_widths,
+                detection_cascade_per_scale,
+                score_threshold, use_the_model_cascade, gpu_detections, num_detections);
+    return;
+}
+
+
+
+} // end of namespace objects_detection
+} // end of namespace doppia

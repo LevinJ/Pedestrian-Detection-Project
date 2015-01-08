@@ -1,0 +1,6 @@
+
+
+	EXR Gil extension
+	-----------------
+		
+		copy the exr directory in gil/extension

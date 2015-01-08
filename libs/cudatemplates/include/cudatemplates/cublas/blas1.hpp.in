@@ -1,0 +1,72 @@
+/* 
+  Cuda Templates.
+
+  Copyright (C) 2008 Institute for Computer Graphics and Vision,
+                     Graz University of Technology
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
+${warning}
+
+
+int iamax(const Vector<${type}> &x)
+{
+  return cublasI${t}amax(x.getSize(), x, x.inc());
+}
+
+int iamin(const Vector<${type}> &x)
+{
+  return cublasI${t}amin(x.getSize(), x, x.inc());
+}
+
+${normtype} asum(const Vector<${type}> &x)
+{
+  return cublas${N}${c}asum(x.getSize(), x, x.inc());
+}
+
+void axpy(${type} alpha, const Vector<${type}> &x, Vector<${type}> &y)
+{
+  assert(x.getSize() == y.getSize()); 
+  cublas${T}axpy(x.getSize(), alpha, x, x.inc(), y, y.inc());
+}
+
+void copy(const Vector<${type}> &x, Vector<${type}> &y)
+{
+  assert(x.getSize() == y.getSize()); 
+  cublas${T}copy(x.getSize(), x, x.inc(), y, y.inc());
+}
+
+${type} dot${c}(const Vector<${type}> &x, const Vector<${type}> &y)
+{
+  assert(x.getSize() == y.getSize()); 
+  return cublas${T}dot${c}(x.getSize(), x, x.inc(), y, y.inc());
+}
+
+${normtype} nrm2(const Vector<${type}> &x)
+{
+  return cublas${N}${c}nrm2(x.getSize(), x, x.inc());
+}
+
+void scal(${type} alpha, Vector<${type}> &x)
+{
+  cublas${T}scal(x.getSize(), alpha, x, x.inc());
+}
+
+void swap(Vector<${type}> &x, Vector<${type}> &y)
+{
+  assert(x.getSize() == y.getSize()); 
+  cublas${T}swap(x.getSize(), x, x.inc(), y, y.inc());
+}

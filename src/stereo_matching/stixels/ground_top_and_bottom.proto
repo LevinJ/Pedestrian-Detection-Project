@@ -1,0 +1,18 @@
+// This file describes the format used to record the ground plane corridor information.
+// This data is used to filter detections based on the ground plane estimate.
+// This data format is ment to be used together with the stixels.proto file.
+// for more details see http://code.google.com/p/protobuf and stixels.proto
+
+package doppia_protobuf;
+
+message TopAndBottom {
+
+	// top and bottom position, in pixels
+	required uint32 top_y = 1;
+	required uint32 bottom_y = 2;
+}
+
+message GroundTopAndBottom {
+
+	repeated TopAndBottom top_and_bottom = 1;
+}

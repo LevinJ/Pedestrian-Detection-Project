@@ -1,0 +1,476 @@
+This is [release v2](https://bitbucket.org/rodrigob/doppia/src/tip/?at=v2) of the doppia code, code should work, please report any issue.
+
+     ____   __  ____  ____  __   __  
+    (    \ /  \(  _ \(  _ \(  ) / _\ 
+     ) D ((  O )) __/ ) __/ )( /    \
+    (____/ \__/(__)  (__)  (__)\_/\_/
+
+
+What is this ?
+==============
+
+The doppia repository contains the open source release of the following research publications
+
+* Pedestrian detection at 100 frames per second   
+  R. Benenson, M. Mathias, R. Timofte, L. Van Gool; presented at CVPR 2012.
+
+* Stixels estimation without depth map computation  
+  R. Benenson, R. Timofte, L. Van Gool; presented at ICCV 2011, CVVT workshop.
+
+* Fast stixels estimation for fast pedestrian detection  
+  R. Benenson, M. Mathias, R. Timofte, L. Van Gool; presented at ECCV 2012, CVVT workshop.
+
+* Seeking the strongest rigid detector
+  R. Benenson, M. Mathias, T. Tuytelaars, L. Van Gool; presented at CVPR 2013.
+
+* Ten years of pedestrian detection, what have we learned?
+  R. Benenson, M. Omran, J. Hosang, B. Schiele; presented at ECCV 2014, CVRSUAD workshop.
+
+* [Face detection without bells and whistles](http://markusmathias.bitbucket.org/2014_eccv_face_detection/)
+  M. Mathias, R. Benenson, M. Pedersoli, L. Van Gool; presented at ECCV 2014. 
+
+
+the code is released with a _research only_ license (see license.text),  
+the license is _not_ [OSI compatible](http://opensource.org/docs/osd) (due, at least, to term 6 since we do discriminate against "fields of endeavor").
+
+The main authors of this work are
+
+* [Rodrigo Benenson](http://rodrigob.github.io) (code architecture, test time code)
+* [Markus Mathias](http://homes.esat.kuleuven.be/~mmathias) (training time code)
+* [Mohamed Omran](http://www.mpi-inf.mpg.de/departments/computer-vision-and-multimodal-computing/people/mohamed-omran) (training time code)
+* [Radu Timofte](http://www.vision.ee.ethz.ch/~timofter) (contributed to stixels estimation code)
+
+and the code is owned by the [KU Leuven university](https://securewww.esat.kuleuven.be/psi/visics) and the [MPI-Inf](https://www.mpi-inf.mpg.de).
+
+This C++ and CUDA code base provides means to compute stixels estimates from stereo images, detect pedestrians for single images, and train the detector for new classes.
+
+![Example pedestrian detection result](http://rodrigob.github.com/figures/2012_eccv_cvvt_workshop_example_system_results_small.png "Example pedestrian detection result")
+![Example face detection result](http://rodrigob.github.io/figures/2014_eccv_face_detection_example_small.png "Example face detection result")
+
+
+
+Introduction
+============
+
+Before starting looking into the code a few warning need to be provided:
+
+1. The doppia open source release is code that has been _extracted_ from a much larger code base (that includes more stereo methods, optical flow, visual odometry and many other things).
+   Because of this:
+     * There is chances some things may break down, since (more) bug may have been introduced while extracting the code.
+     * If wonder "why is this method templated?" or "why there is an abstract class for something that has only one child?"; the answer is always "because in the original code base has many variants of this method".
+
+2. The name `doppia` aims to hint about "double". Doppia is a library for _stereo images_ processing, the assumed default input is stereo images. The monocular images input is a special case. This is visible in the code. 
+
+3. In case it is not already clear, this is **research quality code**. The code has been developed over a 4 year lapse, mainly with the focus on easy exploration of multiple variants and some concern on computational efficiency. The readability and compactness of the code where secondary considerations.  
+   We are releasing the code with the hope that it will enable other researchers push forward the frontiers of human knowledge.
+
+4. We did our best to keep a regular code style everywhere, but there might be some exceptions: sorry about that. 
+
+
+Changes between v1 and v2
+==========================
+
+Persons who have used v1 will find v2 very familiar. The code base is still 90% the same.
+There are however some important changes:
+
+1. Some bugs regarding the feature channels computation and reading have been fixed.
+
+2. The training code is now (a bit) cleaner in more in line with the style of the rest of the code.
+
+3. We now provide models and configuration files to reproduce the CVPR2013/ECCVw2014 baselines, 
+   for a quick training (less than 20 minutes in our machine), and for face detection (ECCV2014).
+ 
+Point 1 is the most critical one. 
+Models created with v1 are still usable with v2, however the quality will be slightly lower because the channels are now slightly different.
+It is advised to re-train v1 models for v2. We provide some pre-trained models for v2.
+
+Regarding point 2, if you created some training configuration scripts for v1, they will need to be updated for v2. 
+The changes are simple name changes that should be straightforward. 
+Feel free to contact us if you have doubts about this.
+
+Please note that if you want to reproduce exactly our 2011 or 2012 results we recommend using v1.
+If you only care about detection results please use the detection bounding boxes provided in the [Caltech benchmark](http://www.vision.caltech.edu/Image_Datasets/CaltechPedestrians/).
+If you care about correctness, please use v2. Speed should be comparable to v1.
+
+
+Requirements
+============
+
+* Linux (the code can in theory compile and run on windows, but practice has shown this to be a bad idea).
+* C++ and CUDA compilation environments properly set. Only gcc 4.5 or superior [are supported](https://bitbucket.org/rodrigob/doppia/issue/2/stixel_world-building-fix-of-building#comment-1842139).
+* A GPU with CUDA capability 2.0 or higher (only for objects detection code, stixels code is CPU only), and ~200 Mb of free memory (for images of 640x480 pixels).
+* All boost libraries.
+* Google protocol buffer.
+* OpenCv installed (2.4, but code also work with older versions. 3.0 not yet suppoted, but pull requests welcome).  
+  If speed is your concern, I strongly recommend to compile OpenCv on your machine using CUDA, enabled all relevant SIMD instructions and using `-ffast-math -funroll-loops -march=native` flags.
+* libjpeg, libpng.
+* libSDL 
+* CMake >= 2.4.3 (and knowledge on how to use it).
+
+* Fair amount of patience to get things running.
+
+
+How to compile the code ?
+==========================
+
+The folder `/data` contains data that will be useful to do some mini-tests of the code.  
+The folder `/tools` contains many (python) scripts used to manipulate data, prepare datasets, generate plots, transform data.  
+The folder `/src` is where all the juicy pieces are, each subfolder groups code by topic.  
+The folder `/src/applications` is where all the code that compiles is located and it is where you will focus your attention at this stage.  
+
+This code has been compiled on multiple machines multiple times.  
+This code has run on Ubuntu and Fedora distributions.  
+To the best of our knowledge things should compile and run smoothly; but experience tells that you may encounter some pain here.  
+Use your experience to understand and figure out what could be the problem.  
+If you think there is something intrinsically wrong in our code,
+please fill a bug report (see "FAQ" section).
+
+
+Step 1: where is what ?
+------------------------
+
+Before trying to compile anything you must edit the file `common_settings.cmake` to add the configuration specfic to your own machine (check line 338).
+
+You should also execute (once) `generate_protocol_buffer_files.sh` to make sure the protocol buffer files match the version installed in your system.
+
+
+Step 2: compile CPU only code
+------------------------------
+
+I suggest you first try to compile `doppia/src/applications/ground_estimation`.  
+This is the simplest program and should make sure that your cmake + C++ pipeline is working fine.
+
+1. To compile any program in doppia simply go to the corresponding application directory,  
+   `cd doppia/src/applications/ground_estimation`
+
+2. Run `cmake -D CMAKE_BUILD_TYPE=RelWithDebInfo . && make`.  
+   If you know what you are doing you can run `ccmake .` first and setup things right.  
+   If you know that you have enough memory you can run `cmake . && make -j5` (or `-j10`) to make things go faster.
+
+3. If things went well you should be able to run  
+   `cmake . && make -j2 && ./ground_estimation -c test.config.ini`  
+   and see fireworks !
+
+4. For more information on how to use the application(s) read section "How to use the code ?".
+
+If `ground_estimation` compiled fine, then you should be able to use the same steps to compile `stixel_world`.
+
+    cd doppia/src/applications/stixel_world
+    cmake . && make -j2 && OMP_NUM_THREADS=4 ./stixel_world -c fast.config.ini --gui.disable false
+    cmake . && make -j2 && OMP_NUM_THREADS=4 ./stixel_world -c fast_uv.config.ini --gui.disable false
+
+
+Step 3: compile test time code
+-------------------------------
+
+In step 2 all compiled code was only C++, now we will include CUDA code. Having properly done step 1 is critical.
+
+1. `cd doppia/src/applications/objects_detection`
+2. `cmake -D CMAKE_BUILD_TYPE=RelWithDebInfo . && make -j2`
+3. `cmake . && make -j2 && OMP_NUM_THREADS=4 ./objects_detection -c cvpr2012_very_fast_over_bahnhof.config.ini --gui.disable false`   
+    When starting ./objects_detection may spend a few seconds (~10 seconds) precomputing before launching.
+
+If things go well you should see a (very brief) video of stixels being estimated and pedestrian being detected.
+You can also run
+
+    cmake . && make -j2 && OMP_NUM_THREADS=4 ./objects_detection -c cvpr2012_inria_pedestrians.config.ini --gui.disable false
+or
+
+    cmake . && make -j2 && OMP_NUM_THREADS=4 ./objects_detection -c cvpr2012_chnftrs_over_bahnhof.config.ini --gui.disable false
+or
+
+    cmake . && make -j2 && ./objects_detection -c eccv2014_face_detection_pascal.config.ini --gui.disable false
+    
+for more fun. Consult section "How to use the code ?" for more information.
+
+If you want to use our objects detector as part of a larger system, you may be interested in the section "What is `objects_detection_lib` ?".
+
+
+Step 4: (optional) compile `objects_detection_lib`
+-------------------------------------------------
+
+Same as steps 2 and 3 (if more details needed, fill a bug report; see FAQ below).
+
+This compilation might take longer than others, since multiple versions are compiled.
+
+See section "What is `objects_detection_lib` ?" below, for more details.
+
+
+Step 5: (optional) compile training time code
+----------------------------------------------
+
+1. `cd doppia/src/applications/boosted_learning`
+2. Execute the script `run_speedy_training.sh`.
+    If something goes wrong, inspect the script and go step by step.
+    
+    `run_speedy_training.sh` should 
+    
+      1. Compile boosted_learning
+      2. Download and extract the training data
+      3. Launch the training of a model in a "fast configuration", that gives a good balance between training speed and quality.
+      
+3. You can inspect the learned model (ending in `.bootstrap<number>`), using the python script `tools/objects_detection/models/plot_detector_model.py`.
+
+
+How to use the code ?
+====================
+
+All executables inside doppia have the following behaviour:
+
+* `./the_application --help` will list all the command options and short description for each one.  
+  Since the applications contain multiple algorithms and each algorithm has multiple options, in practice the application has dozens or even hundred of options.  
+  Most options have a sane default value.
+
+* Since there are many options, all applications have a `--configuration_file` option, that can  also be called using `--c`.
+  We have provided example configuration files (with extension `*.config.ini`) as starting point (see previous section for the full command lines).
+
+* All options listed via `--help` can be set either via command line or via the configuration file.  
+  If an option is present both in the configuration file and in the command line, command line takes precedence.
+  This feature is very useful for experimentation, where you can have a "base configuration" and then test different options on top.  
+  A typical example of this is `--gui.disable true` / `--gui.disable false` to disable or enable the user interface.
+
+* When using the graphic interface, notice the "user interface keyboards inputs" printed in the console when the application launches (which allows to pause, switch view types, and save screenshots). There is also the option `--gui.save_all_screenshots true` which can be handy.
+
+
+`stixel_world`
+--------------
+
+This application computes the ground plane estimate and the stixel distance.  
+The user interface has different "modes" that can be switched by pushing the numbers in the keyboard.
+The configuration files provided should give a good idea of the relevant options (look for the options that are not commented out).
+
+
+`objects_detection`
+--------------------
+
+This application detects objects.
+Again the configuration files provided should give a good idea of the relevant options (look for the options that are not commented out).
+
+The option `save_detections` will save files in the [protocol buffer format](https://developers.google.com/protocol-buffers/docs/overview) specified by `doppia/src/objects_detection/detections.proto`.
+Protocol buffer files can be read and manipulated by most programming languages.  
+You can use scripts such as `doppia/tools/objects_detection/detections_to_caltech.py` to convert the detections into another format of predilection.
+
+Possibly the most relevant option is `objects_detector.method`. We provide CPU and GPU implementations of the following papers:
+
+* P. Dollar et al. 2009 Integral Channel Features
+
+* P. Dollar et al. 2010 Fastest pedestrian detector in the West
+
+* Benenson et al. 2012 Pedestrian detection at 100 frames per second   
+
+These techniques are then re-used in other papers.
+Please notice that the CPU versions are **not** identical to the GPU versions.   
+The features computation provide slightly different results, which in turn create different performances.
+Currently, the GPU version is the only to have fine tunned features computation.  
+Also we use more the GPU versions than the CPU versions, so there is more chances than the CPU version are buggy.   
+Importantly only the GPU version has been tunned for speed, 
+the CPU version is provided (and used) only for clarity and debugging purposes. 
+The CPU version will run *hundred of times* slower than the GPU version.    
+On principle a fast (1~10 Hz) CPU version is possible, but we have not created it since our focus was on the (faster) GPU version.
+
+When `objects_detector.method = cpu_channels` or `objects_detector.method = gpu_channels` the actual method used depends on the input model.  
+If the input method is a single scale model (such as 2012_*_trained_model_octave_0_*.proto.bin) then P. Dollar 2009 will be used.  
+If the input is a multiscale model, then the image features will only be computed at the require scales, and the multiple models are used (see plot 3.a of Benenson et al. 2012).
+
+When using the detector(s) on new datasets the properly setting `objects_detector.min_scale/.max_scale/.num_scales` is critical. We also recommend trying `objects_detector.ignore_soft_cascade = false` since the soft cascade was adjusted to keep the performance on the INRIA dataset and may be sub-optimal on other datasets (without the soft cascade the detector runs ~20x slower).
+
+For more details of the content of the trained models please consult `doppia/src/objects_detection/detector_model.proto`, notice that not all the options considered on the files and currently handled.
+
+When `gui.disable = false`, the user interface will present images such as the one above. 
+The more colourful a window is, the higher the confidence on the detection; inversely, the darker the window the lower the detection score (the closer to `objects_detector.score_threshold`).
+
+`boosted_learning`
+--------------------
+
+This application allows to train models via Adaboost.
+On its common usage it takes as input a set of cropped positive samples,
+and a list of negative images. `boosted_learning` will do multiple rounds training a model, 
+mining hard-negative examples, and re-training a new model from scratch.
+
+This is the program we have used to train all of our models.
+For models with multiple templates (e.g. VeryFast, Roerei, or HeadHunter) each template is trained separatelly, 
+they are merged a posteriori using `doppia/tools/objects_detection/models/create_models_bundle.py`.
+We provide some example configuration files for `boosted_learning` in `doppia/src/applications/boosted_learning`.
+You will need to download and setup the training data by yourself.
+
+For more details see also section "How train the detector for a new class ?".
+
+
+What is `objects_detection_lib` ?
+=======================================
+
+If you simply want to detect pedestrians in a stereo or monocular dataset we recommend you use the `objects_detection` application and use the output protocol buffer file.  
+On the other hand if your applications requires detections "on the fly" or a tight integration of the detector, then `objects_detection_lib` could be for you.
+
+Look at `doppia/src/applications/objects_detection_lib/objects_detection_lib.hpp` to see how simple the interface is and `TestObjectsDetectionApplication` of an example usage.
+
+Please not that to keep a simple interface `objects_detection_lib` uses singleton objects. Due to this _only a single instance can be used_; trying to run two instances in different threads will possibly have catastrophic consequences.  
+For a deeper integration you will have to use the actual classes used to implement `objects_detection_lib` (see `objects_detection_lib.cpp` and `doppia/src/applications/objects_detection/ObjectsDetectionApplication.cpp`).
+
+
+How train the detector for a new class ? 
+=========================================
+
+1. Make sure you have run step 5 of the instructions above.
+
+2. Collect large dataset. The more the merrier. Think at least 1000~10000 positive examples, and same amount of negative images.
+
+3. You will need to crop your positive samples. 
+   Make sure to leave a generous margin around your objects. 
+   You can use the training files pointed in `run_speedy_training.sh` as an example.
+
+4. Copy one of the example configuration files for `boosted_learning` and edit. 
+   In particular you want to adjust the path to the training files, model_size, object_window, the number of weak classifiers,
+   the number of samples for each bootstrapping round, and the number of bootstrapping rounds. 
+   See comments in `inria_speedy_training.config.ini` and `boosted_learning --help` for examples and indications on how to use the different options. 
+
+   I strongly suggest you start with a lightweight setup (e.g. 1000 level 2 decision trees, 3 bootstrapping rounds, 5000 negative samples per round)
+   to validate your setup, and only after seeing initial results, start increasing the model size, amount of bootstrapping rounds and samples.
+
+5. Run `boosted_learning` and enjoy the progress bar motion. `plot_detector_model.py` is quite handy to inspect of the model is "learning at all".
+
+6. Evaluate your models using `objects_detection`.
+   
+7. Enjoy !
+
+Please note that our rigid templates are most effective for objects with little structural variance.
+It can handle well intra-class variance (people with different clothes), and mild deformations (different face expressions).
+Faces and pedestrians work great, cars with different aspect ratio work so~so.
+
+(If you have compiled everything, looked at the code, the configuration files, read the papers, and still have some questions;  
+please contact the authors, we will then update this readme).
+
+
+FAQ
+============
+
+I am using this code for my new publication, how should I cite it ?
+-------------------------------------------------------------------
+
+The current release covers multiple papers now.
+Please cite the adequate one.
+
+If you use our VeryFast detector or stixels, please cite:
+
+    @inproceedings{Benenson2012Cvpr,
+      author = {R. Benenson and M. Mathias and R. Timofte and L. {Van Gool}},
+      title = {Pedestrian detection at 100 frames per second},
+      booktitle = {CVPR},
+      year = {2012}
+    }
+
+If you use our Roerei detector, please cite:
+
+    @inproceedings{Benenson2013Cvpr,
+      author = {R. Benenson and M. Mathias and T. Tuytelaars and L. {Van Gool}},
+      title = {Seeking the strongest rigid detector},
+      booktitle = {CVPR},
+      year = {2013}
+    }
+
+If you use SquaresChnFtrs, please cite:
+
+    @inproceedings{Benenson2014Eccvw,
+      author = {R. Benenson and M. Omran and J. Hosang and and B. Schiele},
+      title = {Ten years of pedestrian detection, what have we learned?},
+      booktitle = {ECCV, CVRSUAD workshop},
+      year = {2014}
+    }
+
+If you use our HeadHunter face detector (or the DPM face detector model), please cite:
+
+    @inproceedings{Mathias2014Eccv,
+      author = {M. Mathias and R. Benenson and M. Pedersoli and L. {Van Gool}},
+      title = {Face detection without bells and whistles},
+      booktitle = {ECCV},
+      year = {2014}
+    }
+
+
+I found a bug, what should I do ?
+---------------------------------
+
+Please fill a bug report in the [bitbucket repository](https://bitbucket.org/rodrigob/doppia).    
+I cannot commit to answering or fixing all bugs, but we will do our best.
+
+Before filling a bug report make sure you have tested the latest version of the source code available at [bitbucket repository](https://bitbucket.org/rodrigob/doppia).
+
+
+"atomicAdd" is undefined
+------------------------
+
+When running `cmake . && make` to compile `boosted_learning` you may encounter the following error
+
+    error: identifier "atomicAdd" is undefined
+
+then run `cmake . && make` again (sorry could not figure out the proper cmake fix, so I used this "run it twice" workaround).
+
+If this workaround does not work, make sure you are compiling for compute capability 1.1 or higher (e.g. compute_20 / sm_20); and that your GPU supports it.
+
+
+opencv2/gpu/gpu.hpp not found
+-----------------------------
+
+OpenCv 2.4.2 defined `cv::gpu::CudaMem` but by default does not install the corresponding header files (OpenCv 2.3 did).  
+Copy `/OpenCV-2.4.2/modules/gpu/include/opencv2/gpu/gpu.hpp` into `your_system_include/opencv2/gpu/gpu.hpp` and things will go better.
+
+
+What is this nvcc-4.4.sh file? Where do I find it?
+--------------------------------------------------
+
+`nvcc.sh` is just a small work around we use to make cuda work when you
+have "too new" gcc installed.
+
+Its content is
+
+    #!/bin/bash
+    /usr/local/cuda/bin/nvcc --compiler-bindir /home/rodrigob/code/references/cuda/gcc-4.4 $@
+
+and the gcc-4.4 folder contains
+
+    $ ls -lh /home/rodrigob/code/references/cuda/gcc-4.4
+    total 4.0K
+    lrwxrwxrwx 1 rodrigob rodrigob  16 2011-08-11 15:42 g++ -> /usr/bin/g++-4.4
+    lrwxrwxrwx 1 rodrigob rodrigob  16 2011-08-11 15:42 gcc -> /usr/bin/gcc-4.4
+    -rwxr-xr-x 1 rodrigob rodrigob 102 2011-11-17 19:26 nvcc-4.4.sh
+
+using this, `nvcc` knows it should use gcc-4.4 to compile (instead of the
+system default, more up to date gcc, with which cuda 4 is not compatible). 
+I think cuda 5 fixes this issue (but not sure).
+
+
+In your CVPR 2013 paper, how did you implement the "Automatic Color Equalization" ?
+------------------------------------------------------------------------------------
+
+At the very end of our [paper](http://rodrigob.github.io/documents/2013_cvpr_roerei_with_supplementary_material.pdf) we briefly mention that we use the code from Shunsuke Aihara,
+availabe at the following urls
+
+https://pypi.python.org/pypi/colorcorrect
+
+https://bitbucket.org/aihara/colorcorrect
+
+We use the default parameters of his `colorcorrect.algorithm.automatic_color_equalization` implementation.
+As mentioned in the paper the much faster `gray world` equalization also provides good results.
+
+For convenience we include the helper script `doppia/tools/objects_detection/datasets/equalize_colors.py` which will batch process images in a folder.
+
+
+How to detect faces ?
+----------------------
+
+You have three choices, you can either use our `HeadHunter` face detector model, our `HeadHunter_baseline` model, or our vanilla DPM model.
+
+For the `HeadHunter` model, follow the instructions above to compile `./objects_detection` and then simply run
+
+    cmake -D CMAKE_BUILD_TYPE=RelWithDebInfo . && make -j2 && ./objects_detection -c eccv2014_face_detection_pascal.config.ini --gui.disable false
+
+modify `objects_detector.model` option in the configuration file (see commented line) to use the `HeadHunter_baseline` model.
+
+To use the DPM model, please follow the instructions in the readme file at `doppia/src/applications/dpm_face_detector`.
+This model is not related to the overall `doppia` code base, 
+but we include the instructions here for complemeteness regarding our [ECCV 2014](http://markusmathias.bitbucket.org/2014_eccv_face_detection/) paper.
+
+
+
+
+

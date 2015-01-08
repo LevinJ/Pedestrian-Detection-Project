@@ -1,0 +1,207 @@
+// This file describes the format used to described an objects detector model 
+// we store in one file multiple kinds of detectors.
+// for more details see http://code.google.com/p/protobuf
+
+package doppia_protobuf;
+
+import "detections.proto"; // will use Point2d and Box
+
+
+// mapped over the LibLinear model storage
+// http://www.csie.ntu.edu.tw/~cjlin/liblinear
+message LinearSvmModel
+{
+  optional string solved_type = 1;
+  optional uint32 number_of_classes = 2; // nr_class
+  repeated int32 labels = 3; // label
+  optional uint32 number_of_features = 4; // nr_feature
+  required float bias = 5;  
+  repeated float w = 6;
+}
+
+
+message IntegralChannelsFeature 
+{
+  required int32 channel_index = 1;
+
+  // box over which compute the integral 
+  // the box coordinates are in the original image pixels
+  // (so the model can work on with different channel shrinkage factors)
+  required Box box = 2;
+}
+
+message IntegralChannelDecisionStump
+{
+  // rectangles over one of the integral channels
+  required IntegralChannelsFeature feature = 1; 
+  
+  // thresholding the corresponding rectangle provides the a weak binary classifier
+  required float feature_threshold = 2; 
+
+  // if true will evaluate (feature > threshold), 
+  // if false, will evaluate (feature < threshold)
+  optional bool larger_than_threshold = 3 [default = false];
+
+  // for the leaves of the tree we use weights that will contribute to the final score
+  optional float true_leaf_weight = 10;
+  optional float false_leaf_weight = 11;
+}
+
+
+message IntegralChannelBinaryDecisionTreeNode
+{
+    // id of this tree node
+    required uint32 id = 1;
+
+    // node id of the parent
+    // parent_id == id for the tree root
+    required uint32 parent_id = 2;
+
+    // binary output value of the parent to which this node should be attached
+    optional bool parent_value = 3;
+
+    optional IntegralChannelDecisionStump decision_stump = 4;
+}
+
+
+message IntegralChannelBinaryDecisionTree
+{
+    // the nodes building the binary tree
+    repeated IntegralChannelBinaryDecisionTreeNode nodes = 1;
+}
+
+
+message IntegralChannelStumpSet
+{
+    // inside a stump set the leaves weights of the stump are ignored,
+    // only binary ouputs per stump is used
+    repeated IntegralChannelDecisionStump nodes = 1;
+
+    // this is a vector of 2**num_nodes, 
+    // where each entry correspond to the weight given to 
+    // a particular combinations of stumps activation interpreted as an integer number.
+    // We assume that first stump is the least significant bit.
+    // example: stump A says "true", stumps B says "true", stump C says "false", then we output weight at index 3-1.
+    repeated float weights = 2;
+}
+
+
+message SoftCascadeOverIntegralChannelsStage
+{
+  // Stumps are level-1 (depth-1) trees
+  // Level-2 (depth-2) trees have 3 nodes
+  enum FeatureTypes { Stumps=0; Level2DecisionTree=10; LevelNDecisionTree=100; StumpSet=200;}
+  required FeatureTypes feature_type = 1;
+
+  optional IntegralChannelDecisionStump decision_stump = 10;
+  optional IntegralChannelBinaryDecisionTree level2_decision_tree = 11;
+  optional IntegralChannelBinaryDecisionTree levelN_decision_tree = 12;
+  optional IntegralChannelStumpSet stump_set = 13;
+
+  // weight of corresponding binary classifier output
+  required float weight = 2; 
+
+  // score threshold at the current stage (after evaluating the corresponding rectangle)
+  required float cascade_threshold = 3; 
+}
+
+// describes a trained softcascade such as the one described in
+// "Robust Object Detection Via Soft Cascade", Bourdev and Brandt, CVPR 2005
+// http://www.lubomir.org/academic/softcascade.pdf
+// but applied over the features described in
+// "Integral Channel Features", Dollar et al., BMVC 2009
+// http://vision.ucsd.edu/~pdollar/research/papers/dollarBMVC09ChnFtrs.pdf
+message SoftCascadeOverIntegralChannelsModel
+{
+    
+    repeated SoftCascadeOverIntegralChannelsStage stages = 1;     
+
+    // simple text description of the integral channels to use
+    // hog6 means 6 orientation + 1 magnitude
+    // gabor9 means 9 gabor filter orientation 
+    // etc..
+    // examples: hog6_luv, hog9_rgb, 
+    optional string channels_description = 2 [default = "hog6_luv"];
+
+    // integer shrinking factor,
+    // 1 means original size, 2 means half the size, 4 means one fourth of the original size
+    optional uint32 shrinking_factor = 3 [default = 4];
+}
+
+
+message DetectorModel
+{
+    // a human readable description of the model
+    optional string detector_name = 1;
+
+    // a human readable description of the dataset used for training
+    required string training_dataset_name = 2;
+
+    // this should be Freebase.com machine ID, such as "/m/017r8p"
+    // http://wiki.freebase.com/wiki/Machine_ID
+    optional string semantic_category = 300 [default = "/m/017r8p"];
+
+    // region of the image used to detect an object
+    optional Point2d model_window_size = 10;
+    optional Box object_window = 11;  
+   
+    // type of the detector
+    enum DetectorTypes { LinearSvm=0; SoftCascadeOverIntegralChannels=10; HoughForest=20; }
+    required DetectorTypes detector_type = 3;
+
+    // to be set if detector_type == LinearSvm
+    optional LinearSvmModel linear_svm_model = 100;
+
+    // to be set if detector_type == SoftCascadeOverIntegralChannels
+    optional SoftCascadeOverIntegralChannelsModel soft_cascade_model = 102;
+	
+    // to be set if detector_type == HoughForest
+    //optional HoughForestModel hough_forest_model = 103;
+
+    // model_window_size and object_window should be consistent across scales
+    optional float scale = 200 [default = 1.0];
+
+    // if occlusion_level <= 0.0 we ignore the occlusions
+    // if occlusion_level > 0.0, we consider this model an occlusion case.
+    // model_window_size and object_window should be the same as when occlusion_level is 0
+    optional float occlusion_level = 210 [default = 0.0];
+
+    enum OcclusionTypes { LeftOcclusion=10; RightOcclusion=11; BottomOcclusion=20; TopOcclusion=21; }
+    optional OcclusionTypes occlusion_type = 211 [default = BottomOcclusion];
+}
+
+
+
+message MultiScalesDetectorModel {
+
+   // a human readable description of the model
+   optional string detector_name = 1;
+
+   // a human readable description of the dataset used for training
+   required string training_dataset_name = 2;
+
+   // we expect all these detectors to have scale set to specific values
+   // no two models with the same scale are allowed
+   // the consistency between the scales and the model window sizes will be checked at run-time
+   repeated DetectorModel detectors = 3;   
+}
+
+
+// A more general version of MultiScalesDetectorModel where models may have different scales and occlusion levels.
+message DetectorModelsBundle {
+
+   // a human readable description of the bundle name
+   optional string bundle_name = 1;
+
+   // a human readable description of the dataset used for training these models
+   required string training_dataset_name = 2;
+
+   // we expect all these detectors to have scale set to specific values
+   // no two models with the same scale and occlusion level are allowed
+   // the consistency between the scales and the model window sizes will be checked at run-time
+   repeated DetectorModel detectors = 3;   
+}
+
+
+
+

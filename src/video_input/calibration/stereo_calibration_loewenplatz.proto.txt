@@ -1,0 +1,114 @@
+
+# this is a text proto file, see protocol definition at doppia/src/video_input/calibration.proto
+
+# Stereo camera calibration used by Andreas Ess
+
+name: "Andreas Ess Loewenplatz sequence stereo calibration"
+
+left_camera {
+
+  name: "left camera"
+
+  internal_parameters {
+
+	k11: 801.25700
+	k12: 0
+	k13: 325.05589
+
+	k21: 0  
+	k22: 802.24324 
+	k23: 243.29150
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.22813   
+        k2:  0.16483
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+	# identity matrix
+		r11: 1
+		r12: 0
+		r13: 0
+
+		r21: 0
+		r22: 1
+		r23: 0
+
+		r31: 0
+		r32: 0
+		r33: 1
+	}
+
+	translation {
+	# zero vector
+		t1: 0
+		t2: 0
+		t3: 0
+	}
+  }
+
+} # end of left_camera
+
+
+
+right_camera {
+
+  name: "right camera"
+
+ internal_parameters {
+
+	k11: 804.81163
+	k12: 0
+	k13: 335.67663
+
+	k21: 0  
+	k22: 805.19672 
+	k23: 232.42614
+
+	k31: 0 
+	k32: 0 
+	k33: 1
+  }
+
+  radial_distortion {
+        k1: -0.21484   
+	k2:  0.10025
+  }
+  
+  # no tangential_distortion
+
+  pose {	
+	rotation {
+		r11: 0.999923235343999  
+		r12: -0.005513666805298   
+		r13: 0.011096075772572
+
+		r21:  0.005431036122504   
+		r22:  0.999957401012593   
+		r23:  0.007463243716854
+
+		r31: -0.011136752930121  
+		r32: -0.007402407615178   
+		r33:  0.999910584550275
+	}
+
+	translation {
+	# in unknown quantities
+		t1: -0.6192593383286313 
+		t2: -0.0007428029644263 
+		t3: -0.0142760640908179
+	}
+  }
+
+} # end of right_camera
+
+
+

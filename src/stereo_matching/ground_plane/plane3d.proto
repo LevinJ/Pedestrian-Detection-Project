@@ -1,0 +1,16 @@
+// This file describes the format used to record the ground plane corridor information.
+// This data is used to filter detections based on the ground plane estimate.
+// This data format is ment to be used together with the stixels.proto file.
+// for more details see http://code.google.com/p/protobuf and stixels.proto
+
+package doppia_protobuf;
+
+message Plane3d {
+        // this message type mirrors 
+        // the data members of http://eigen.tuxfamily.org/dox/classEigen_1_1Hyperplane.html
+
+        required float offset = 1;
+        required float normal_x = 2;
+        required float normal_y = 3;
+        required float normal_z = 4;
+}
