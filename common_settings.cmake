@@ -339,11 +339,15 @@ elseif(HOSTED_AT_D2_NO_GPU GREATER -1)
   set(liblinear_INCLUDE_DIRS "/home/rodrigob/code/references/liblinear-1.8")
   set(liblinear_LIBRARY_DIRS "/home/rodrigob/code/references/liblinear-1.8")
 
-elseif(${HOSTNAME} STREQUAL  "the_name_of_your_machine")
+elseif(${HOSTNAME} STREQUAL  "levin-Lenovo-V4400")
   # change the_name_of_your_machine to what /bin/hostname returns
 
-  message(STATUS "Using the_name_of_your_machine compilation options")
+  message(STATUS "Using levin-Lenovo-V4400")
   # start with an empty section, and see what fails as you go through the readme.text instructions
+option(USE_GPU "Should the GPU be used ?" TRUE)
+set(CUDA_BUILD_CUBIN OFF)
+set(CUDA_NVCC_FLAGS "-arch=sm_30" CACHE STRING "nvcc flags" FORCE)
+find_package( OpenCV REQUIRED )
 
 else ()
   message(FATAL_ERROR, "Unknown machine, please add your configuration inside doppia/common_settings.cmake")

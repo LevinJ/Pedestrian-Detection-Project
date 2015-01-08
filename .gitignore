@@ -1,1 +1,6 @@
 data/
+*~
+build/
+src/applications/ground_estimation/ground_estimation
+*.out.txt
+

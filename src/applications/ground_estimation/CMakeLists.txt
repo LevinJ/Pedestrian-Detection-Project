@@ -156,7 +156,7 @@ target_link_libraries(ground_estimation
    SDL
    gomp Xext Xrandr X11
    ${libpng_LIBRARIES} jpeg
-   ${opencv_LIBRARIES} opencv_legacy
+   ${OpenCV_LIBS}
 
    #csparse sparse spblas mv
    #lapack blas atlas
