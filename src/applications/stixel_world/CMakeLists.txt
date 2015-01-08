@@ -165,7 +165,7 @@ target_link_libraries(stixel_world
    SDL X11 Xext #Xrandr
    gomp
    ${libpng_LIBRARIES} jpeg
-   ${opencv_LIBRARIES}
+   ${OpenCV_LIBS}
 
    #csparse sparse spblas mv
    #lapack blas atlas

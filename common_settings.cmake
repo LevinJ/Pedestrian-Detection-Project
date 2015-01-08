@@ -347,6 +347,9 @@ elseif(${HOSTNAME} STREQUAL  "levin-Lenovo-V4400")
 option(USE_GPU "Should the GPU be used ?" TRUE)
 set(CUDA_BUILD_CUBIN OFF)
 set(CUDA_NVCC_FLAGS "-arch=sm_30" CACHE STRING "nvcc flags" FORCE)
+include_directories(
+    /usr/local/include
+)
 find_package( OpenCV REQUIRED )
 
 else ()
