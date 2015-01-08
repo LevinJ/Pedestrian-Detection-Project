@@ -255,7 +255,7 @@ target_link_libraries(objects_detection
    gomp
    ${libpng_LIBRARIES} jpeg
 #  ${OpenEXR_LIBRARIES}
-   ${opencv_LIBRARIES}
+  ${OpenCV_LIBS}
 
    #${vw_LIBRARIES}
    #csparse sparse spblas mv

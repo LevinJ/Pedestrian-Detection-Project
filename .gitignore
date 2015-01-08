@@ -3,6 +3,7 @@ data/
 build/
 src/applications/ground_estimation/ground_estimation
 src/applications/stixel_world/stixel_world
+src/applications/objects_detection/objects_detection
 *.out.txt
 
 
