@@ -5,6 +5,10 @@ from __future__ import print_function
 
 import os.path
 import sys
+import shutil
+import os
+import glob
+import generate_final_caltech_format_results
 local_dir = os.path.dirname(sys.argv[0])
 sys.path.append(os.path.join(local_dir, ".."))
 sys.path.append(os.path.join(local_dir, "../data_sequence"))
@@ -60,7 +64,8 @@ def parse_arguments():
 
     if options.output_path:
         if os.path.exists(options.output_path):
-            parser.error("output_path should point to a non existing directory")
+            #parser.error("output_path should point to a non existing directory")
+            shutil.rmtree(options.output_path)
     else:
         parser.error("'output' option is required to run this program")
 
@@ -127,10 +132,13 @@ def detections_to_caltech(input_path, output_path):
     
     return
 
+
+
 def main():
     
     options = parse_arguments()    
     detections_to_caltech(options.input_path, options.output_path)
+    generate_final_caltech_format_results.generate_result_files(options.output_path)
     return
 
 
