@@ -166,7 +166,7 @@ target_link_libraries(boosted_learning
    SDL X11 Xext #Xrandr
    gomp
    ${libpng_LIBRARIES} jpeg
-   ${opencv_LIBRARIES}
+   ${OpenCV_LIBS}
 
    #${google_perftools_LIBS}
 )

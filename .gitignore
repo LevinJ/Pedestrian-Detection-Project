@@ -4,6 +4,15 @@ build/
 src/applications/ground_estimation/ground_estimation
 src/applications/stixel_world/stixel_world
 src/applications/objects_detection/objects_detection
+src/applications/boosted_learning/boosted_learning
+src/applications/bootstrapping_lib/libbootstrapping.so
+src/applications/bootstrapping_lib/libcuda_stuff_library.a
+libs/liblinear-1.8/libblas.so
+libs/liblinear-1.8/liblinear.so
 *.out.txt
-
+*.pyc
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
 
