@@ -812,11 +812,11 @@ void GpuIntegralChannelsForPedestrians::compute_v1()
     // smooth the input image --
     compute_smoothed_image_v0();
 
-    //add the dct channels
-    doppia::integral_channels::compute_dct_channels(gpu_channels);
-
     // compute the HOG and LUV channels --
     compute_hog_and_luv_channels_v1();
+
+    //add the dct channels
+    doppia::integral_channels::compute_dct_channels(gpu_channels);
 
     // resize and compute integral images for each channel --
     // with v1 we obtain 4.65 Hz versus 4.55 Hz with v0
