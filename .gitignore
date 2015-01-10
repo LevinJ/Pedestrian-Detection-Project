@@ -7,6 +7,7 @@ src/applications/objects_detection/objects_detection
 src/applications/boosted_learning/boosted_learning
 src/applications/bootstrapping_lib/libbootstrapping.so
 src/applications/bootstrapping_lib/libcuda_stuff_library.a
+src/applications/compute_feature_channels/compute_feature_channels
 libs/liblinear-1.8/libblas.so
 libs/liblinear-1.8/liblinear.so
 *.out.txt
@@ -16,3 +17,5 @@ CMakeCache.txt
 Makefile
 cmake_install.cmake
 
+
+src/applications/compute_feature_channels/2015_*recordings/

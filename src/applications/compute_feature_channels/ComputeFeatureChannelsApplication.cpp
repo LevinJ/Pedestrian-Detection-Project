@@ -62,7 +62,9 @@ program_options::options_description ComputeFeatureChannelsApplication::get_opti
             ("process_folder",
              program_options::value<string>(),
              "for evaluation purposes, will process images on a folder. Normal video input will be ignored")
-
+             ("channels.num_hog_angle_bins", program_options::value<int>()->default_value(6),
+               "Number of angle bins used when computing the HOG channels.\n"
+                "Currently supported values are 6 or 18.")
             ("silent_mode",
              program_options::value<bool>()->default_value(false),
              "if true, no status information will be printed at run time (use this for speed benchmarking)")
