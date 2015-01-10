@@ -17,17 +17,27 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" id="com.nvidia.cuda.ide.toolchain.base.1351912119" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+				<configuration buildProperties="" description="" id="com.nvidia.cuda.ide.toolchain.base.1351912119" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="com.nvidia.cuda.ide.toolchain.base.1351912119.274601011" name="/" resourcePath="">
 						<toolChain id="com.nvidia.cuda.ide.toolchain.base.1798348867" name="com.nvidia.cuda.ide.toolchain.base" superClass="com.nvidia.cuda.ide.toolchain.base">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.1227269115" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
-							<builder id="com.nvidia.cuda.ide.builder.1453111509" managedBuildOn="false" name="CUDA Toolkit 6.5 Builder.Default" superClass="com.nvidia.cuda.ide.builder"/>
+							<builder buildPath="${workspace_loc:/doppia/src/applications/compute_feature_channels/build}" id="com.nvidia.cuda.ide.builder.1453111509" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="CUDA Toolkit 6.5 Builder" superClass="com.nvidia.cuda.ide.builder"/>
 							<tool id="nvcc.compiler.base.115724752" name="NVCC Compiler" superClass="nvcc.compiler.base">
-								<option id="nvcc.compiler.pic.251662262" superClass="nvcc.compiler.pic"/>
+								<option id="nvcc.compiler.pic.251662262" name="Position Independent Code (-fPIC)" superClass="nvcc.compiler.pic"/>
+								<inputType id="nvcc.compiler.input.cu.1215140949" superClass="nvcc.compiler.input.cu"/>
+								<inputType id="nvcc.compiler.input.cpp.673426963" superClass="nvcc.compiler.input.cpp"/>
+								<inputType id="nvcc.compiler.input.c.482660498" superClass="nvcc.compiler.input.c"/>
 							</tool>
-							<tool id="nvcc.linker.base.2069371075" name="NVCC Linker" superClass="nvcc.linker.base"/>
+							<tool id="nvcc.linker.base.2069371075" name="NVCC Linker" superClass="nvcc.linker.base">
+								<inputType id="nvcc.linker.input.728990799" superClass="nvcc.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
 							<tool id="nvcc.archiver.base.1518232358" name="NVCC Archiver" superClass="nvcc.archiver.base"/>
-							<tool id="com.nvidia.host.assembler.820547458" name="Host Assembler" superClass="com.nvidia.host.assembler"/>
+							<tool id="com.nvidia.host.assembler.820547458" name="Host Assembler" superClass="com.nvidia.host.assembler">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1861294042" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
@@ -43,4 +53,9 @@
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/doppia"/>
+		</configuration>
+	</storageModule>
 </cproject>
