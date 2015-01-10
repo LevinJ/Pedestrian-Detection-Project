@@ -6,6 +6,7 @@
 
 #include "gpu/integral_channels.cu.hpp"
 #include "gpu/shrinking.cu.hpp"
+#include "gpu/dct_channels.cu.hpp"
 
 #include "helpers/ModuleLog.hpp"
 #include "helpers/gpu/cuda_safe_call.hpp"
@@ -169,7 +170,7 @@ int GpuIntegralChannelsForPedestrians::get_shrinking_factor()
 
 size_t GpuIntegralChannelsForPedestrians::get_num_channels() const
 {
-    return num_hog_angle_bins + 4;
+    return 2*(num_hog_angle_bins + 4);
 }
 
 
@@ -810,6 +811,9 @@ void GpuIntegralChannelsForPedestrians::compute_v1()
 
     // smooth the input image --
     compute_smoothed_image_v0();
+
+    //add the dct channels
+    doppia::integral_channels::compute_dct_channels(gpu_channels);
 
     // compute the HOG and LUV channels --
     compute_hog_and_luv_channels_v1();
