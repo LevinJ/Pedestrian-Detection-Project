@@ -1,8 +1,8 @@
 # Pedestrian-Detection-Project
-Pedestrian Detection Project Codes and Documentations
 
 
-Project Goal:
+
+#Project Goal:
 
 The goal of this project is to explore how better feature reprentations and various visual cues can be used to improve detection quality in computer vision area.
 
