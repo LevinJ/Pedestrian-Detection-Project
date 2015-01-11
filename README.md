@@ -13,14 +13,15 @@ Note that this project is largely to reproduce observations/discovery in “Bene
 
 
 
-What has been done:
+What Has Been Done:
 
 1. Got the baseline detector up and running
 2. Got baseline  miss rate
-3. Implemented baseline + DCT detector
+3. Implemented the new baseline + DCT pedestrian detector. 
+5. Cross verified that DCT algorithm CUDA implementation in the new detector is correct.
 
 
-What's next:
+What's Next:
 
 Investigate what went wrong with baseline + DCT detector, and then move on to implement the baseline + optical flow 
 
