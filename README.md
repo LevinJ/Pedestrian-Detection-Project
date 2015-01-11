@@ -14,7 +14,9 @@ Note that this project is largely to reproduce observations/discovery in “Bene
 
 
 #What Has Been Done:
+
 The project started in mid November 2014, up to now, below are achieved:
+
 1. Got the baseline detector up and running
 2. Got baseline  miss rate
 3. Implemented the new baseline + DCT pedestrian detector. 
