@@ -13,7 +13,7 @@ Note that this project is largely to reproduce observations/discovery in “Bene
 
 
 
-What Has Been Done:
+#What Has Been Done:
 
 1. Got the baseline detector up and running
 2. Got baseline  miss rate
@@ -21,10 +21,10 @@ What Has Been Done:
 5. Cross verified that DCT algorithm CUDA implementation in the new detector is correct.
 
 
-What's Next:
+#What's Next:
 
 Investigate what went wrong with baseline + DCT detector, and then move on to implement the baseline + optical flow 
 
-Current Issues:
+#Current Issues:
 
 The DCT method is not generating the 3.53% detection rate improvement as expected, instead it has a negative 20% detection rate impact. I am investigating what's going wrong and trying to come up with an conclusion on this issue.
