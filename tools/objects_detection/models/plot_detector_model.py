@@ -1610,8 +1610,8 @@ def main():
 
     else:  # assume single scale model
         plot_detector_model(model)
-		if True:
-	        compute_stumps_statistics(model)
+        if True:
+            compute_stumps_statistics(model)
         if True:
             plot_weak_classifiers_versus_height(model)
             plot_weak_classifiers_versus_width(model)
