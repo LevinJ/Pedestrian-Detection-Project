@@ -6,7 +6,7 @@
 
 The goal of this project is to explore how better feature reprentations and various visual cues can be used to improve detection quality in computer vision area.
 
-Specifically, this project targets the fascinating and meaningful real world problem "pedestrian detection" as a playground. Using current state of the art pedestrian detector "SquaresChnFtrs" as a baseline, I am using two methods to increase detection accuracy. Expand 10 HOG+LUV channels into 20 channels by using DCT (discrete cosine transform); Encode the optical flow using SDt features (image difference between current frame T and coarsely aligned T-4 and T-8); 
+Specifically, this project targets the fascinating and meaningful real world problem "pedestrian detection" as a playground. Using current state of the art pedestrian detector ["SquaresChnFtrs"](https://bitbucket.org/rodrigob/doppia) as a baseline, I am using two methods to increase detection accuracy. Expand 10 HOG+LUV channels into 20 channels by using DCT (discrete cosine transform); Encode the optical flow using SDt features (image difference between current frame T and coarsely aligned T-4 and T-8); 
 
 
 Note that this project is largely to reproduce observations/discovery in [“Benenson etc., 2014 EECV” paper](http://rodrigob.github.io/documents/2014_eccvw_ten_years_of_pedestrian_detection_with_supplementary_material.pdf).The baseline detecor's miss rate on Inria pedestiran dataset is 34.81%. The dct mehtod is expected to have 3.53% percent improvement, and the optical flow method is expected to have 4.47% improvement. 
