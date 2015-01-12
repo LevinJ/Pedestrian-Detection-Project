@@ -20,13 +20,13 @@ The project started in mid November 2014, up to now, below are achieved:
 1. Got the baseline detector up and running
 2. Got baseline  miss rate
 3. Implemented the new baseline + DCT pedestrian detector. 
-5. Cross verified that DCT algorithm CUDA implementation in the new detector is correct.
+5. Cross verified that DCT algorithm CUDA implementation in the new detector is correct.[codes here](https://github.com/LevinJ/DCT-Algorithm-Verification-Cuda-)
 
 
 #What's Next:
 
 Investigate what goes wrong with baseline + DCT detector, and then move on to implement the baseline + optical flow 
 
-#Current Issues:
+#Current Major Issues:
 
-The DCT method is not generating the 3.53% detection rate improvement as expected, instead it has a negative 20% detection rate impact. I am investigating what's going wrong and trying to come up with a conclusion on this issue.
+The DCT method is not generating the 3.53% detection rate improvement as expected, instead it has a negative 20% detection rate impact. I am investigating what's going wrong and trying to come up with a conclusion on this issue. Refer [here](https://github.com/LevinJ/Pedestrian-Detection-Project/issues) for a complete list of issues and corrsponding updates in this project.
