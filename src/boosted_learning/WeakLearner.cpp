@@ -171,7 +171,7 @@ weights_t WeakLearner::determine_stump_set_weights(const weights_t &weights, boo
 
 
 
-void WeakLearner::train_decision_tree(boost::shared_ptr<WeakClassifierDecisionTree> decision_tree,
+void WeakLearner::train_decision_tree(std::string &strDebug, boost::shared_ptr<WeakClassifierDecisionTree> decision_tree,
         const weights_t &weights, const weights_t::value_type sum_weights)
 {
     weights_t::value_type min_error = 0;
@@ -181,11 +181,11 @@ void WeakLearner::train_decision_tree(boost::shared_ptr<WeakClassifierDecisionTr
     create_root_node(weights, root, min_error, samples_above_root_stump_threshold);
 
     decision_tree->_decision_nodes[0] = DecisionTreeNode(root->_feature, root->_feature_index, root->_threshold, root->_alpha, 1);
-
+    DecisionStump::decision_stump_p root_left;
+    DecisionStump::decision_stump_p root_right;
     if (decision_tree->_depth==1)
     {
-        DecisionStump::decision_stump_p root_left;
-        DecisionStump::decision_stump_p root_right;        
+
         min_error = create_sibling_nodes(weights, samples_above_root_stump_threshold, root_left, root_right);
 
         decision_tree->_decision_nodes[1] = DecisionTreeNode(root_left->_feature, root_left->_feature_index, root_left->_threshold, root_left->_alpha, 2);
@@ -210,6 +210,16 @@ void WeakLearner::train_decision_tree(boost::shared_ptr<WeakClassifierDecisionTr
     {
         //root->print(log_debug());
     }
+    //output the classifier detailed info
+    std::ostringstream stringStream;
+    stringStream <<"weak classifier weighted miss rate: "<< min_error * 100<< "%"<< std::endl;
+    stringStream <<"weak classifier weight: "<< decision_tree->get_beta()<<  std::endl;
+    stringStream <<"weak classifier selected features: "
+    		<< root->_feature.channel<<","<<root->_feature.x<<","<<root->_feature.y<<";"
+    		<< root_left->_feature.channel<<","<<root_left->_feature.x<<","<<root_left->_feature.y<<";"
+    		<< root_right->_feature.channel<<","<<root_right->_feature.x<<","<<root_right->_feature.y<<";"
+    		<<  std::endl;
+    strDebug = stringStream.str();
 
     return;
 }

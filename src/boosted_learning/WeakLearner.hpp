@@ -34,7 +34,7 @@ public:
                             TrainingData::const_shared_ptr_t trainingData,
                             const std::vector<objectClassLabel_t> & classes);
 
-    void train_decision_tree(boost::shared_ptr<WeakClassifierDecisionTree> decision_tree, const weights_t &weights, const weights_t::value_type sumWeights=1.0);
+    void train_decision_tree(std::string &strDebug, boost::shared_ptr<WeakClassifierDecisionTree> decision_tree, const weights_t &weights, const weights_t::value_type sumWeights=1.0);
     void train_stump_set(boost::shared_ptr<WeakClassifierStumpSet> stump_set, const weights_t &weights);
     weights_t determine_stump_set_weights(const weights_t &weights, boost::shared_ptr<WeakClassifierStumpSet> stump_set);
 

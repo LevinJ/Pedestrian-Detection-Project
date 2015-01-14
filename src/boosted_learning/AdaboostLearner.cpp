@@ -138,7 +138,22 @@ weights_t::value_type AdaboostLearner::obtain_error_rate(const std::vector<boost
     return error_rate;
 }
 
+double getAvarageMargin(const weights_t &total_classifier_correct,
+		const weights_t &total_classifier_incorrect, int numofSamples){
+	double margintotal = 0;
+	for(int i=0; i< numofSamples; i++){
+		margintotal += (total_classifier_correct[i]-total_classifier_incorrect[i])/(total_classifier_correct[i]+total_classifier_incorrect[i]);
+	}
+	return margintotal/numofSamples;
+}
 
+double getAvarageOutput(const weights_t &total_classifier_output,int numofSamples){
+	double outputtotal = 0;
+	for(int i=0; i< numofSamples; i++){
+		outputtotal += abs(total_classifier_output[i]);
+	}
+	return outputtotal/numofSamples;
+}
 //***************************************************************************************************
 
 void AdaboostLearner::train(int decision_tree_depth, std::string dataset_name, WeakClassifierType weak_classifier_type)
@@ -185,6 +200,12 @@ void AdaboostLearner::train(int decision_tree_depth, std::string dataset_name, W
     std::vector<boost::shared_ptr<WeakClassifier> > weak_classifiers;
     weights_t total_classifier_output(_training_data->get_num_examples(), 0);
 
+    //correct labeling total for all the classifer on each training sample
+    weights_t total_classifier_correct(_training_data->get_num_examples(), 0);
+
+    //correct labeling total for all the classifer on each training sample
+    weights_t total_classifier_incorrect(_training_data->get_num_examples(), 0);
+
     bool previous_error_rate_is_zero = false;
     const bool enable_printing = true;
 
@@ -203,12 +224,13 @@ void AdaboostLearner::train(int decision_tree_depth, std::string dataset_name, W
         }
 
         boost::shared_ptr<WeakClassifier> weak_classifier;
+        std::string strDebug ="";
 
         if(weak_classifier_type==DECISION_TREE)
         {
             weak_classifier.reset(new WeakClassifierDecisionTree(decision_tree_depth));
             weights_t::value_type sum_weights = 1;
-            weak_learner.train_decision_tree(boost::static_pointer_cast<WeakClassifierDecisionTree>(weak_classifier), training_sample_weights, sum_weights);
+            weak_learner.train_decision_tree(strDebug, boost::static_pointer_cast<WeakClassifierDecisionTree>(weak_classifier), training_sample_weights, sum_weights);
 
             weights_t::value_type beta = boost::static_pointer_cast<WeakClassifierDecisionTree>(weak_classifier)->get_beta();
             if (beta <= 0)
@@ -271,11 +293,24 @@ void AdaboostLearner::train(int decision_tree_depth, std::string dataset_name, W
             if (total_classifier_output[training_sample_index] >= 0)
             {
                 (_training_data->get_class_label_for_sample(training_sample_index) == 1) ? tp++ : fp++ ;
+                //add statistics for correct labeling and incorrect labelling total for all weak classifier on each sample
+                if (_training_data->get_class_label_for_sample(training_sample_index) == 1){
+                	total_classifier_correct[training_sample_index] += abs(weak_classifier_output);
+                }else{
+                	total_classifier_incorrect[training_sample_index] += abs(weak_classifier_output);
+                }
             }
             else
             {
                 (_training_data->get_class_label_for_sample(training_sample_index) == 1) ? fn++ : tn++ ;
+                //add statistics for correct labeling and incorrect labelling total for all weak classifier on each sample
+                if (_training_data->get_class_label_for_sample(training_sample_index) == 1){
+                	total_classifier_incorrect[training_sample_index] += abs(weak_classifier_output);
+                }else{
+                	total_classifier_correct[training_sample_index] += abs(weak_classifier_output);
+                }
             }
+
 
         }
 
@@ -305,15 +340,23 @@ void AdaboostLearner::train(int decision_tree_depth, std::string dataset_name, W
                 std::cout << "Error Rate: " << error_rate << " %" <<  std::endl;
                 std::cout << "Error Positives: " <<  weights_t::value_type(fn) / (tp + fn) * 100 << " %" <<  std::endl;
                 std::cout << "Error Negatives: " <<  weights_t::value_type(fp) / (tn + fp) * 100 << " %" <<  std::endl;
-                std::cout << std::endl;
+                std::cout << strDebug<<std::endl;
             }
             else
             {
                 // no need to print the same data again and again, overwrite the previous output line
-                std::cout << "\rError rate stable at zero until " << training_round << std::flush;
+                std::cout << "\rError rate stable at zero until " << training_round <<  std::endl<< std::flush;
+                std::cout << strDebug<<std::endl;
             }
         }
-
+        //output avarage margin and final classifier result value  to the screen
+		if(training_round == 10 || training_round==_num_training_rounds-1 || training_round%100 == 0){
+			double margin = getAvarageMargin(total_classifier_correct,
+					total_classifier_incorrect, _training_data->get_num_examples());
+			double avarageoutput = getAvarageOutput(total_classifier_output,_training_data->get_num_examples());
+			std::cout <<"avarage margin: "<< margin
+					<<" avarage output value: " <<avarageoutput <<std::endl;
+		}
         // update in case the error rate fluctuated
         previous_error_rate_is_zero = (error_rate == 0);
 

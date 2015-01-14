@@ -1280,6 +1280,11 @@ void BoostedLearningApplication::train(const bool silent_mode, const bool doBoot
         printf("Time elapsed in seconds: %d\n", delta_time.total_seconds());
         printf("Time elapsed while producing strong classifier for training round %zu: %s\n",
                k, boost::posix_time::to_simple_string(delta_time).c_str());
+        bool banalyzeouputfirstround= false;
+        if(banalyzeouputfirstround){
+        	throw std::runtime_error("analyze first round training output, stop here for now");
+        }
+
     } // end of "for each training round"
 
     boost::filesystem::copy_file(BoostedLearner->get_output_model_filename(), baseOuputModelFilename);

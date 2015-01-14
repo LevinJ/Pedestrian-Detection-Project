@@ -85,6 +85,7 @@ void getFeaturesConfigurations(const point_t &modelWindow,
                                Features &featuresConfigurations,
                                const std::string &configType,
                                const boost::program_options::variables_map &option);
+void writeFeaturesToFile(std::string filename , Features &featuresConfigurations);
 
 void computeRandomFeaturesConfigurations(const point_t &modelWindow,
                                          const int numOfFeatures, const int numChannels,
