@@ -96,7 +96,7 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 	const size_t input_channel_stride = input_channel.stride[1];
 	const size_t input_row_stride = input_channel.stride[0];
 	const size_t input_width = input_channel.size[0];
-	const size_t input_height = input_channel.size[1] * (input_channel.size[2]/2);
+	const size_t input_height = input_channel.size[1];
 	const size_t num_input_channels = input_channel.size[2];
 
 	gpu_channels_t::KernelData Src = input_channel;
@@ -113,7 +113,8 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 
 
 	// global image index for the  src and dst global memory
-	//int may exceed the limit?
+	//img_x, img_y refers to the logical pixle postion in a single image
+	const size_t channelIndex = blockIdx.z;
 	int img_x = bx * BLOCK_SIZE + tx;
 	int img_y = by * BLOCK_SIZE + ty;
 	if(img_x >=input_width ){
@@ -129,7 +130,9 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 		img_y = input_height - 1;
 
 	}
-	const int img_index = img_y * input_row_stride + img_x;
+	//img_index is for the original image
+	//and is used to point to the physical position of the pixel in the one dimension array
+	const int img_index = channelIndex * input_channel_stride+ (img_y * input_row_stride + img_x);
 	//the block index for the shared memory block
 	//const int blockIndex = ty<< BLOCK_SIZE_LOG2 + tx;
 	const int blockIndex = ty* BLOCK_SIZE+ tx;
@@ -140,8 +143,8 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 	CurBlockLocal1[blockIndex] = (Src.data[img_index] -128.0f);
 
 	if(img_x==STOPATXPOSTION && img_y==STOPATYPOSTION){
-		printf("data in kernel:x=%d,y=%d, value=%f \n",
-				img_x,img_y, (Src.data[img_index] -128.0f));
+		printf("data in kernel:channel %d, x=%d,y=%d, value=%f \n",
+				channelIndex, img_x,img_y, (Src.data[img_index] -128.0f));
 	}
 	//synchronize threads to make sure the block is copied
 	__syncthreads();
@@ -174,8 +177,8 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 	CurBlockLocal2[blockIndex] = curelem;
 
 	if(img_x==STOPATXPOSTION && img_y==STOPATYPOSTION){
-		printf("data in kernel:x=%d,y=%d, value=%f \n",
-				img_x,img_y, curelem);
+		printf("data in kernel:channel %d, x=%d,y=%d, value=%f \n",
+				channelIndex, img_x,img_y, curelem);
 	}
 
 	//synchronize threads to make sure the first 2 matrices are multiplied and the result is stored in the second block
@@ -198,8 +201,8 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 	CurBlockLocal1[blockIndex ] = curelem;
 
 	if(img_x==STOPATXPOSTION && img_y==STOPATYPOSTION){
-		printf("data in kernel:x=%d,y=%d, value=%f \n",
-				img_x,img_y, curelem);
+		printf("data in kernel:channel %d, x=%d,y=%d, value=%f \n",
+				channelIndex, img_x,img_y, curelem);
 	}
 	//synchronize threads to make sure the matrices are multiplied and the result is stored back in the first block
 	__syncthreads();
@@ -212,37 +215,23 @@ __global__ void dct_channels_kernel(gpu_channels_t::KernelData input_channel)
 	if(val>255){
 		val = 255;
 	}
-	//const int x=bx*8 + tx;
-	//const int y=by*8 + ty;
-//	if(x==72 && y==1352){
-//		printf("dct value in kenerl: x=%d,y=%d,img_index=%d,transformeddctvalue=%d, dctvalue=%f, originalvalue =%d\n",
-//				tx,ty,img_index,val,CurBlockLocal1[blockIndex],Src.data[img_index]);
-//	}
-
 	Src.data[img_index + dctChannelsIndexStart] = val;
-
-
-
-
-	//	if(bx==9 && by==169 && tx==0 && ty==0){
-	//		printf("dct value in kenerl: x=%d,y=%d,img_index=%d,value=%d, originalvalue =%d\n",
-	//				tx,ty,img_index,val,Src.data[img_index + dctChannelsIndexStart]);
-	//	}
-
 }
 
 void compute_dct_channels(gpu_channels_t &input_channel){
 
 	const int image_width = input_channel.size[0];
-	//treat the whole original channels as one big image, with each image lay vertically
-	//in sequence
-	const int image_height = input_channel.size[1] * (input_channel.size[2]/2);
+	//treat each image separately
+	const int image_height = input_channel.size[1];
+	//we will need to process the first half of the channels and store them in the second half
+	const int numchannels = input_channel.size[2];
 	//The grid and block layout is as below
 	//(width/blocksize X height/blocksize)    (blocksize X blocksize)
 	//this is so arranged so that we can allocate conveniently allocate shared memory for each
 	//block
 	const dim3 block_dimensions(BLOCK_SIZE, BLOCK_SIZE);
-	const dim3 grid_dimensions(image_width/BLOCK_SIZE + 1, image_height/BLOCK_SIZE + 1);
+	const dim3 grid_dimensions(image_width/BLOCK_SIZE + 1,image_height/BLOCK_SIZE + 1,
+			numchannels/2);
 	//assert(image_width%BLOCK_SIZE == 0 && image_height%BLOCK_SIZE == 0);
 
 	dct_channels_kernel<<<grid_dimensions, block_dimensions>>>(input_channel);
