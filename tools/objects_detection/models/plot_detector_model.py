@@ -990,6 +990,18 @@ def plot_features_statistics():
                             "$||\\cdot||$",
                             "L", "U", "V")
             pylab.gca().set_xticklabels(ticks_labels)
+        elif num_channels == 20:
+            ticks_labels = ("$90^{\\circ}$", "$60^{\\circ}$", "$30^{\\circ}$",
+                            "$0^{\\circ}$", "$-30^{\\circ}$", "$-60^{\\circ}$",
+                            #"$\\left\\Vert \\cdot \\right\\Vert$",
+                            "$||\\cdot||$",
+                            "L", "U", "V",
+                            "DCT$90^{\\circ}$", "DCT$60^{\\circ}$", "DCT$30^{\\circ}$",
+                            "DCT$0^{\\circ}$", "DCT$-30^{\\circ}$", "DCT$-60^{\\circ}$",
+                            #"$\\left\\Vert \\cdot \\right\\Vert$",
+                            "DCT$||\\cdot||$",
+                            "DCT-L", "DCT-U", "DCT-V")
+            pylab.gca().set_xticklabels(ticks_labels)
         elif num_channels == 43:
             ticks_labels = ["$90^{\\circ}$", "$60^{\\circ}$", "$30^{\\circ}$",
                             "$0^{\\circ}$", "$-30^{\\circ}$", "$-60^{\\circ}$",
