@@ -726,6 +726,8 @@ void GpuIntegralChannelsForPedestrians::resize_and_integrate_gpu_channels_v2()
     // first we shrink all the channels ---
     {
         doppia::integral_channels::shrink_channels(gpu_channels, shrunk_gpu_channels, resizing_factor);
+        //add the dct channels right after the shrinking
+        doppia::integral_channels::compute_dct_channels(shrunk_gpu_channels);
 
         const bool save_shrunk_channels = false;
         if(save_shrunk_channels)
@@ -816,7 +818,7 @@ void GpuIntegralChannelsForPedestrians::compute_v1()
     compute_hog_and_luv_channels_v1();
 
     //add the dct channels
-    doppia::integral_channels::compute_dct_channels(gpu_channels);
+    //doppia::integral_channels::compute_dct_channels(gpu_channels);
 
     // resize and compute integral images for each channel --
     // with v1 we obtain 4.65 Hz versus 4.55 Hz with v0
