@@ -32,4 +32,5 @@ Refer [here](https://github.com/LevinJ/Pedestrian-Detection-Project/issues) for 
 
 #Project video and paper:
 Video: [here](http://youtu.be/jGV0zTtxmmA)
+
 Paper: will be uploaded soon.
