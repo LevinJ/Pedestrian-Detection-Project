@@ -29,3 +29,7 @@ Implement the baseline + optical flow
 
 #Current Major Issues:
 Refer [here](https://github.com/LevinJ/Pedestrian-Detection-Project/issues) for a complete list of issues and corresponding updates in this project.
+
+#Project video and paper:
+Video: 
+Paper: will be uploaded soon.
