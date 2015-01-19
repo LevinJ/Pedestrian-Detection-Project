@@ -1,7 +1,7 @@
 # Pedestrian-Detection-Project
 
 
-#Project video and paper:
+#Project Video and Paper:
 [Project Video](http://youtu.be/jGV0zTtxmmA)
 
 [Project Paper](https://github.com/LevinJ/Pedestrian-Detection-Project/blob/master/Pedestrian%20Detection%20Project%20Paper.pdf?raw=true)
