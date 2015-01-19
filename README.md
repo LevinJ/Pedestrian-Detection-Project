@@ -1,6 +1,10 @@
 # Pedestrian-Detection-Project
 
 
+#Project video and paper:
+[Project Video](http://youtu.be/jGV0zTtxmmA)
+
+[Project Paper](https://github.com/LevinJ/Pedestrian-Detection-Project/blob/master/Pedestrian%20Detection%20Project%20Paper.pdf?raw=true)
 
 #Project Goal:
 
@@ -9,7 +13,7 @@ The goal of this project is to explore how better feature representation and var
 Specifically, this project targets the fascinating and meaningful real world problem "pedestrian detection" as a test case. Using current state of the art pedestrian detector ["SquaresChnFtrs"](https://bitbucket.org/rodrigob/doppia) as a baseline, I leverage two approaches to increase detection accuracy. Expand 10 HOG+LUV channels into 20 channels by using DCT (discrete cosine transform); Encode the optical flow using SDt features (image difference between current frame T and coarsely aligned T-4 and T-8).
 
 
-Note that this project is largely to reproduce observations/discovery in [“Benenson etc., 2014 EECV” paper](http://rodrigob.github.io/documents/2014_eccvw_ten_years_of_pedestrian_detection_with_supplementary_material.pdf). On the basis of the baseline detector, the DCT method is expected to yield 3.53% improvement, and the optical flow method is expected to yield 4.47% improvement. 
+Note that this project is largely to reproduce observations/discovery in [“Benenson etc., 2014 EECV” paper](http://rodrigob.github.io/documents/2014_eccvw_ten_years_of_pedestrian_detection_with_supplementary_material.pdf). The DCT method is expected to yield 3.53% miss rate improvement, and the optical flow method is expected to yield 4.47% improvement. 
 
 
 
@@ -29,8 +33,3 @@ Implement the baseline + optical flow
 
 #Current Major Issues:
 Refer [here](https://github.com/LevinJ/Pedestrian-Detection-Project/issues) for a complete list of issues and corresponding updates in this project.
-
-#Project video and paper:
-Video: [here](http://youtu.be/jGV0zTtxmmA)
-
-Paper: will be uploaded soon.
