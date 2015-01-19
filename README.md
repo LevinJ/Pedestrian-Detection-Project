@@ -1,6 +1,10 @@
 # Pedestrian-Detection-Project
 
 
+#Project video and paper:
+[Project Video](http://youtu.be/jGV0zTtxmmA)
+
+[Project Paper](https://github.com/LevinJ/Pedestrian-Detection-Project/blob/master/Pedestrian%20Detection%20Project%20Paper.pdf?raw=true)
 
 #Project Goal:
 
@@ -29,8 +33,3 @@ Implement the baseline + optical flow
 
 #Current Major Issues:
 Refer [here](https://github.com/LevinJ/Pedestrian-Detection-Project/issues) for a complete list of issues and corresponding updates in this project.
-
-#Project video and paper:
-[Project Video](http://youtu.be/jGV0zTtxmmA)
-
-[Project Paper](https://github.com/LevinJ/Pedestrian-Detection-Project/blob/master/Pedestrian%20Detection%20Project%20Paper.pdf?raw=true)
