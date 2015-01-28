@@ -13,7 +13,7 @@ The goal of this project is to explore how better feature representation and var
 Specifically, this project targets the fascinating and meaningful real world problem "pedestrian detection" as a test case. Using current state of the art pedestrian detector ["SquaresChnFtrs"](https://bitbucket.org/rodrigob/doppia) as a baseline, I leverage two approaches to increase detection accuracy. Expand 10 HOG+LUV channels into 20 channels by using DCT (discrete cosine transform); Encode the optical flow using SDt features (image difference between current frame T and coarsely aligned T-4 and T-8).
 
 
-Note that this project is largely to reproduce observations/discovery in [“Benenson etc., 2014 EECV” paper](http://rodrigob.github.io/documents/2014_eccvw_ten_years_of_pedestrian_detection_with_supplementary_material.pdf). The DCT method is expected to yield 3.53% miss rate improvement, and the optical flow method is expected to yield 4.47% improvement. 
+Note that this project is largely to reproduce observations/discovery in [“Benenson etc., 2014 ECCV” paper](http://rodrigob.github.io/documents/2014_eccvw_ten_years_of_pedestrian_detection_with_supplementary_material.pdf). The DCT method is expected to yield 3.53% miss rate improvement, and the optical flow method is expected to yield 4.47% improvement. 
 
 
 
